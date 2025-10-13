@@ -4,7 +4,7 @@
     "sku": "ECO-UTN-001",
     "name": "Bamboo Spork Set",
     "category": "Utensils",
-    "unitCost": 2.50,
+    "unitCost": 2.5,
     "reorderPoint": 100
   },
   {
@@ -20,7 +20,7 @@
     "sku": "ECO-UTN-003",
     "name": "Wooden Chopsticks",
     "category": "Utensils",
-    "unitCost": 0.30,
+    "unitCost": 0.3,
     "reorderPoint": 1000
   },
   {
@@ -30,14 +30,5 @@
     "category": "Packaging",
     "unitCost": 0.45,
     "reorderPoint": 750
-  },
-  {
-    "id": 5,
-    "sku": "ECO-CUP-005",
-    "name": "Biodegradable Coffee Cup 12oz",
-    "category": "Cups",
-    "unitCost": 0.60,
-    "reorderPoint": 600
   }
 ]
-
