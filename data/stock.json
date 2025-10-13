@@ -3,13 +3,13 @@
     "id": 1,
     "productId": 1,
     "warehouseId": 1,
-    "quantity": 250
+    "quantity": 25
   },
   {
     "id": 2,
     "productId": 1,
     "warehouseId": 2,
-    "quantity": 150
+    "quantity": 15
   },
   {
     "id": 3,
@@ -60,4 +60,3 @@
     "quantity": 700
   }
 ]
-

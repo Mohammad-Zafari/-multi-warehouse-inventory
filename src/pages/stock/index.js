@@ -1,3 +1,4 @@
+// pages/stock/index.js
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -17,13 +18,15 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  AppBar,
-  Toolbar,
   Box,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import GreenAppBar from '@/components/GreenAppbar'; // <-- Import the shared AppBar
+
+// A threshold for highlighting low stock items
+const LOW_STOCK_THRESHOLD = 10;
 
 export default function Stock() {
   const [stock, setStock] = useState([]);
@@ -31,30 +34,43 @@ export default function Stock() {
   const [warehouses, setWarehouses] = useState([]);
   const [open, setOpen] = useState(false);
   const [selectedStockId, setSelectedStockId] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = () => {
-    Promise.all([
-      fetch('/api/stock').then(res => res.json()),
-      fetch('/api/products').then(res => res.json()),
-      fetch('/api/warehouses').then(res => res.json()),
-    ]).then(([stockData, productsData, warehousesData]) => {
+  const fetchData = async () => {
+    try {
+      const [stockRes, productsRes, warehousesRes] = await Promise.all([
+        fetch('/api/stock'),
+        fetch('/api/products'),
+        fetch('/api/warehouses'),
+      ]);
+
+      if (!stockRes.ok || !productsRes.ok || !warehousesRes.ok) {
+        throw new Error('Failed to fetch required data.');
+      }
+
+      const stockData = await stockRes.json();
+      const productsData = await productsRes.json();
+      const warehousesData = await warehousesRes.json();
+
       setStock(stockData);
       setProducts(productsData);
       setWarehouses(warehousesData);
-    });
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const getProductName = (productId) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     return product ? `${product.name} (${product.sku})` : 'Unknown';
   };
 
   const getWarehouseName = (warehouseId) => {
-    const warehouse = warehouses.find(w => w.id === warehouseId);
+    const warehouse = warehouses.find((w) => w.id === warehouseId);
     return warehouse ? `${warehouse.name} (${warehouse.code})` : 'Unknown';
   };
 
@@ -77,54 +93,43 @@ export default function Stock() {
       if (res.ok) {
         setStock(stock.filter((item) => item.id !== selectedStockId));
         handleClose();
+      } else {
+        throw new Error('Failed to delete stock record');
       }
     } catch (error) {
       console.error('Error deleting stock:', error);
+      // Optionally, show an error to the user via an Alert
     }
   };
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar>
-          <InventoryIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Inventory Management System
-          </Typography>
-          <Button color="inherit" component={Link} href="/">
-            Dashboard
-          </Button>
-          <Button color="inherit" component={Link} href="/products">
-            Products
-          </Button>
-          <Button color="inherit" component={Link} href="/warehouses">
-            Warehouses
-          </Button>
-          <Button color="inherit" component={Link} href="/stock">
-            Stock Levels
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <GreenAppBar /> {/* <-- Using the consistent green AppBar */}
 
       <Container sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1">
             Stock Levels
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            component={Link} 
+          <Button
+            variant="contained"
+            component={Link}
             href="/stock/add"
+            sx={{
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#45a049' },
+            }}
           >
             Add Stock Record
           </Button>
         </Box>
 
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)' }}>
                 <TableCell><strong>Product</strong></TableCell>
                 <TableCell><strong>Warehouse</strong></TableCell>
                 <TableCell align="right"><strong>Quantity</strong></TableCell>
@@ -133,10 +138,19 @@ export default function Stock() {
             </TableHead>
             <TableBody>
               {stock.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} hover>
                   <TableCell>{getProductName(item.productId)}</TableCell>
                   <TableCell>{getWarehouseName(item.warehouseId)}</TableCell>
-                  <TableCell align="right">{item.quantity}</TableCell>
+                  {/* Highlight low stock items */}
+                  <TableCell
+                    align="right"
+                    sx={{
+                      color: item.quantity <= LOW_STOCK_THRESHOLD ? '#F57C00' : 'inherit',
+                      fontWeight: item.quantity <= LOW_STOCK_THRESHOLD ? 'bold' : 'normal',
+                    }}
+                  >
+                    {item.quantity}
+                  </TableCell>
                   <TableCell>
                     <IconButton
                       color="primary"
@@ -156,7 +170,7 @@ export default function Stock() {
                   </TableCell>
                 </TableRow>
               ))}
-              {stock.length === 0 && (
+              {stock.length === 0 && !error && (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
                     No stock records available.
@@ -175,9 +189,7 @@ export default function Stock() {
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose} color="primary">
-              Cancel
-            </Button>
+            <Button onClick={handleClose}>Cancel</Button>
             <Button onClick={handleDelete} color="error" autoFocus>
               Delete
             </Button>
@@ -187,4 +199,3 @@ export default function Stock() {
     </>
   );
 }
-

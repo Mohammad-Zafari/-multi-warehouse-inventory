@@ -1,3 +1,4 @@
+// pages/warehouses/index.js
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -17,27 +18,34 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  AppBar,
-  Toolbar,
   Box,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import GreenAppBar from '../../components/GreenAppbar'; // <-- Import the reusable AppBar
 
 export default function Warehouses() {
   const [warehouses, setWarehouses] = useState([]);
   const [open, setOpen] = useState(false);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchWarehouses();
   }, []);
 
-  const fetchWarehouses = () => {
-    fetch('/api/warehouses')
-      .then((res) => res.json())
-      .then((data) => setWarehouses(data));
+  const fetchWarehouses = async () => {
+    try {
+      const res = await fetch('/api/warehouses');
+      if (!res.ok) {
+        throw new Error('Failed to fetch warehouses');
+      }
+      const data = await res.json();
+      setWarehouses(data);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleClickOpen = (id) => {
@@ -59,54 +67,44 @@ export default function Warehouses() {
       if (res.ok) {
         setWarehouses(warehouses.filter((warehouse) => warehouse.id !== selectedWarehouseId));
         handleClose();
+      } else {
+        throw new Error('Failed to delete warehouse');
       }
     } catch (error) {
       console.error('Error deleting warehouse:', error);
+      // Optionally, show an error to the user
     }
   };
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar>
-          <InventoryIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Inventory Management System
-          </Typography>
-          <Button color="inherit" component={Link} href="/">
-            Dashboard
-          </Button>
-          <Button color="inherit" component={Link} href="/products">
-            Products
-          </Button>
-          <Button color="inherit" component={Link} href="/warehouses">
-            Warehouses
-          </Button>
-          <Button color="inherit" component={Link} href="/stock">
-            Stock Levels
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <GreenAppBar /> {/* <-- Using the new, consistent AppBar */}
 
       <Container sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1">
             Warehouses
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            component={Link} 
+          <Button
+            variant="contained"
+            component={Link}
             href="/warehouses/add"
+            sx={{ 
+              bgcolor: '#4CAF50', 
+              '&:hover': { bgcolor: '#45a049' } 
+            }}
           >
             Add Warehouse
           </Button>
         </Box>
 
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              <TableRow>
+              {/* Themed Table Header */}
+              <TableRow sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)' }}>
                 <TableCell><strong>Code</strong></TableCell>
                 <TableCell><strong>Name</strong></TableCell>
                 <TableCell><strong>Location</strong></TableCell>
@@ -115,13 +113,13 @@ export default function Warehouses() {
             </TableHead>
             <TableBody>
               {warehouses.map((warehouse) => (
-                <TableRow key={warehouse.id}>
+                <TableRow key={warehouse.id} hover>
                   <TableCell>{warehouse.code}</TableCell>
                   <TableCell>{warehouse.name}</TableCell>
                   <TableCell>{warehouse.location}</TableCell>
                   <TableCell>
                     <IconButton
-                      color="primary"
+                      color="primary" // This will inherit green from the theme later
                       component={Link}
                       href={`/warehouses/edit/${warehouse.id}`}
                       size="small"
@@ -138,7 +136,7 @@ export default function Warehouses() {
                   </TableCell>
                 </TableRow>
               ))}
-              {warehouses.length === 0 && (
+              {warehouses.length === 0 && !error && (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
                     No warehouses available.
@@ -157,9 +155,7 @@ export default function Warehouses() {
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose} color="primary">
-              Cancel
-            </Button>
+            <Button onClick={handleClose}>Cancel</Button>
             <Button onClick={handleDelete} color="error" autoFocus>
               Delete
             </Button>
@@ -169,4 +165,3 @@ export default function Warehouses() {
     </>
   );
 }
-

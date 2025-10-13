@@ -1,3 +1,4 @@
+// pages/products/index.js
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -17,13 +18,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  AppBar,
-  Toolbar,
   Box,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import SpaIcon from '@mui/icons-material/Spa';
+import GreenAppBar from '../../components/GreenAppBar'; // reusable Eco AppBar
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -67,45 +67,47 @@ export default function Products() {
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar>
-          <InventoryIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Inventory Management System
-          </Typography>
-          <Button color="inherit" component={Link} href="/">
-            Dashboard
-          </Button>
-          <Button color="inherit" component={Link} href="/products">
-            Products
-          </Button>
-          <Button color="inherit" component={Link} href="/warehouses">
-            Warehouses
-          </Button>
-          <Button color="inherit" component={Link} href="/stock">
-            Stock Levels
-          </Button>
-        </Toolbar>
-      </AppBar>
+      {/* Green AppBar shared across app */}
+      <GreenAppBar />
 
       <Container sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ color: '#2E7D32', fontWeight: 'bold' }}
+          >
             Products
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            component={Link} 
+          <Button
+            variant="contained"
+            sx={{
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#388E3C' },
+              color: '#fff',
+              textTransform: 'none',
+              fontWeight: 'bold',
+            }}
+            component={Link}
             href="/products/add"
           >
-            Add Product
+            + Add Product
           </Button>
         </Box>
 
-        <TableContainer component={Paper}>
+        <TableContainer
+          component={Paper}
+          sx={{ borderRadius: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
+        >
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: 'rgba(76,175,80,0.1)' }}>
               <TableRow>
                 <TableCell><strong>SKU</strong></TableCell>
                 <TableCell><strong>Name</strong></TableCell>
@@ -117,7 +119,13 @@ export default function Products() {
             </TableHead>
             <TableBody>
               {products.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow
+                  key={product.id}
+                  hover
+                  sx={{
+                    '&:hover': { backgroundColor: 'rgba(76,175,80,0.05)' },
+                  }}
+                >
                   <TableCell>{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
@@ -153,18 +161,36 @@ export default function Products() {
           </Table>
         </TableContainer>
 
+        {/* Delete Dialog */}
         <Dialog open={open} onClose={handleClose}>
-          <DialogTitle>Delete Product</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 'bold', color: '#2E7D32' }}>
+            Delete Product
+          </DialogTitle>
           <DialogContent>
             <DialogContentText>
               Are you sure you want to delete this product? This action cannot be undone.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose} color="primary">
+            <Button
+              onClick={handleClose}
+              sx={{
+                color: '#388E3C',
+                fontWeight: 'bold',
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleDelete} color="error" autoFocus>
+            <Button
+              onClick={handleDelete}
+              autoFocus
+              sx={{
+                color: '#fff',
+                bgcolor: '#E53935',
+                '&:hover': { bgcolor: '#C62828' },
+                fontWeight: 'bold',
+              }}
+            >
               Delete
             </Button>
           </DialogActions>
@@ -173,4 +199,3 @@ export default function Products() {
     </>
   );
 }
-

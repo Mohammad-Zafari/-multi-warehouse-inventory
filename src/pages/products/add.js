@@ -1,17 +1,17 @@
+// pages/products/add.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
   Container,
   Typography,
-  TextField,
   Button,
   Box,
   Paper,
-  AppBar,
-  Toolbar,
+  Alert,
 } from '@mui/material';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import GreenAppBar from '@/components/GreenAppbar'; // ✅ unified eco-green AppBar
+import NeutralInput from '@/components/NeutralInput'; // ✅ neutral gray-focus input
 
 export default function AddProduct() {
   const [product, setProduct] = useState({
@@ -22,6 +22,7 @@ export default function AddProduct() {
     reorderPoint: '',
   });
 
+  const [error, setError] = useState(null);
   const router = useRouter();
 
   const handleChange = (e) => {
@@ -30,50 +31,54 @@ export default function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch('/api/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...product,
-        unitCost: parseFloat(product.unitCost),
-        reorderPoint: parseInt(product.reorderPoint),
-      }),
-    });
-    if (res.ok) {
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...product,
+          unitCost: parseFloat(product.unitCost),
+          reorderPoint: parseInt(product.reorderPoint),
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to add product');
       router.push('/products');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar>
-          <InventoryIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Inventory Management System
-          </Typography>
-          <Button color="inherit" component={Link} href="/">
-            Dashboard
-          </Button>
-          <Button color="inherit" component={Link} href="/products">
-            Products
-          </Button>
-          <Button color="inherit" component={Link} href="/warehouses">
-            Warehouses
-          </Button>
-          <Button color="inherit" component={Link} href="/stock">
-            Stock Levels
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <GreenAppBar />
 
       <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: '12px',
+            backgroundColor: '#fff',
+            boxShadow: `
+              0 0 10px 2px rgba(76, 175, 80, 0.25),
+              0 4px 8px rgba(0, 0, 0, 0.05)
+            `,
+          }}
+        >
           <Typography variant="h4" component="h1" gutterBottom>
             Add New Product
           </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
-            <TextField
+            <NeutralInput
               margin="normal"
               required
               fullWidth
@@ -82,7 +87,8 @@ export default function AddProduct() {
               value={product.sku}
               onChange={handleChange}
             />
-            <TextField
+
+            <NeutralInput
               margin="normal"
               required
               fullWidth
@@ -91,7 +97,8 @@ export default function AddProduct() {
               value={product.name}
               onChange={handleChange}
             />
-            <TextField
+
+            <NeutralInput
               margin="normal"
               required
               fullWidth
@@ -100,7 +107,8 @@ export default function AddProduct() {
               value={product.category}
               onChange={handleChange}
             />
-            <TextField
+
+            <NeutralInput
               margin="normal"
               required
               fullWidth
@@ -111,7 +119,8 @@ export default function AddProduct() {
               value={product.unitCost}
               onChange={handleChange}
             />
-            <TextField
+
+            <NeutralInput
               margin="normal"
               required
               fullWidth
@@ -122,12 +131,16 @@ export default function AddProduct() {
               value={product.reorderPoint}
               onChange={handleChange}
             />
+
             <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
               <Button
                 type="submit"
                 fullWidth
                 variant="contained"
-                color="primary"
+                sx={{
+                  bgcolor: '#4CAF50',
+                  '&:hover': { bgcolor: '#43A047' },
+                }}
               >
                 Add Product
               </Button>
@@ -136,6 +149,11 @@ export default function AddProduct() {
                 variant="outlined"
                 component={Link}
                 href="/products"
+                sx={{
+                  color: '#4CAF50',
+                  borderColor: '#4CAF50',
+                  '&:hover': { borderColor: '#43A047', color: '#43A047' },
+                }}
               >
                 Cancel
               </Button>
@@ -146,4 +164,3 @@ export default function AddProduct() {
     </>
   );
 }
-
