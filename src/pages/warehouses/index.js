@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import GreenAppBar from '../../components/GreenAppbar'; // <-- Import the reusable AppBar
+import GreenAppBar from '@/components/GreenAppBar';
 
 export default function Warehouses() {
   const [warehouses, setWarehouses] = useState([]);

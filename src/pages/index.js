@@ -1,19 +1,19 @@
 // File: /pages/index.js
-// Final version – Eco-Green + Orange Theme (Beautiful + Interactive)
+// Unified Dashboard Page using shared <GreenAppBar /> component
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import GreenAppBar from '@/components/GreenAppBar';
 import CategoryBarChart from '@/components/charts/CategoryBarChart';
 import WarehousePieChart from '@/components/charts/WarehousePieChart';
 import {
   Container, Typography, Box, Grid, Card, CardContent, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  AppBar, Toolbar, TableSortLabel, CircularProgress, Alert
+  TableSortLabel, CircularProgress, Alert
 } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import SpaIcon from '@mui/icons-material/Spa';
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -121,23 +121,10 @@ export default function Home() {
 
   return (
     <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
-      {/* Header */}
-      <AppBar position="static" sx={{
-        bgcolor: '#4CAF50',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.25)'
-      }}>
-        <Toolbar>
-          <SpaIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            GreenSupply Co. Dashboard
-          </Typography>
-          <Button color="inherit" component={Link} href="/products">Products</Button>
-          <Button color="inherit" component={Link} href="/warehouses">Warehouses</Button>
-          <Button color="inherit" component={Link} href="/stock">Stock</Button>
-        </Toolbar>
-      </AppBar>
+      {/* Shared Header */}
+      <GreenAppBar />
 
-      {/* Content */}
+      {/* Dashboard Content */}
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4, px: { xs: 2, md: 5 } }}>
         <Typography
           variant="h4"
@@ -153,7 +140,7 @@ export default function Home() {
 
         <Grid container spacing={3}>
 
-          {/* KPI Cards */}
+          {/* KPI: Products Count */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               elevation={2}
@@ -164,7 +151,7 @@ export default function Home() {
                 borderRadius: 3,
                 background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
                 boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 '&:hover': {
                   transform: 'translateY(-2px)',
                   boxShadow: '0 4px 10px rgba(76,175,80,0.45)',
@@ -183,6 +170,7 @@ export default function Home() {
             </Card>
           </Grid>
 
+          {/* KPI: Warehouses Count */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               elevation={2}
@@ -212,7 +200,7 @@ export default function Home() {
             </Card>
           </Grid>
 
-          {/* Stock Value KPI */}
+          {/* KPI: Stock Value */}
           <Grid item xs={12} md={6}>
             <Card
               elevation={3}
@@ -245,11 +233,10 @@ export default function Home() {
             </Card>
           </Grid>
 
-          {/* Charts Section */}
+          {/* Charts */}
           <Grid item xs={12} md={6}>
             <WarehousePieChart data={warehouseStockData} />
           </Grid>
-
           <Grid item xs={12} md={6}>
             <CategoryBarChart data={categoryStockData} />
           </Grid>

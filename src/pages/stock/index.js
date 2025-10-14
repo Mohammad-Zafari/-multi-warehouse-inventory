@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import GreenAppBar from '@/components/GreenAppbar'; // <-- Import the shared AppBar
+import GreenAppBar from '@/components/GreenAppBar';
 
 // A threshold for highlighting low stock items
 const LOW_STOCK_THRESHOLD = 10;
