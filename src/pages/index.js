@@ -1,45 +1,25 @@
 // File: /pages/index.js
-// Unified Dashboard Page using shared <GreenAppBar /> component
+// Unified Dashboard Page using shared <GreenAppBar /> with SSR data prefetch
 
-import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import GreenAppBar from '@/components/GreenAppBar';
 import CategoryBarChart from '@/components/charts/CategoryBarChart';
 import WarehousePieChart from '@/components/charts/WarehousePieChart';
 import {
-  Container, Typography, Box, Grid, Card, CardContent, Button,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  TableSortLabel, CircularProgress, Alert
+  Container, Typography, Box, Grid, Card, CardContent,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Paper, TableSortLabel, Alert
 } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
-export default function Home() {
-  const [products, setProducts] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [stock, setStock] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+// ---------- COMPONENT ----------
+export default function Home({ products, warehouses, stock, error }) {
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      fetch('/api/products').then(r => r.ok ? r.json() : Promise.reject(`Products error: ${r.status}`)),
-      fetch('/api/warehouses').then(r => r.ok ? r.json() : Promise.reject(`Warehouses error: ${r.status}`)),
-      fetch('/api/stock').then(r => r.ok ? r.json() : Promise.reject(`Stock error: ${r.status}`)),
-    ])
-      .then(([p, w, s]) => {
-        setProducts(p);
-        setWarehouses(w);
-        setStock(s);
-      })
-      .catch(e => setError(e.toString()))
-      .finally(() => setLoading(false));
-  }, []);
-
+  // -------- Data Summary --------
   const summaryData = useMemo(() => {
     const totalValue = stock.reduce((sum, item) => {
       const product = products.find(p => p.id === item.productId);
@@ -53,6 +33,7 @@ export default function Home() {
     };
   }, [products, warehouses, stock]);
 
+  // -------- Charts Data --------
   const warehouseStockData = useMemo(() => {
     const grouped = stock.reduce((acc, s) => {
       acc[s.warehouseId] = (acc[s.warehouseId] || 0) + s.quantity;
@@ -77,6 +58,7 @@ export default function Home() {
     }));
   }, [stock, products]);
 
+  // -------- Inventory Table --------
   const sortedInventory = useMemo(() => {
     let inv = products.map(p => {
       const totalQ = stock.filter(s => s.productId === p.id)
@@ -98,17 +80,7 @@ export default function Home() {
     setOrderBy(prop);
   };
 
-  if (loading)
-    return (
-      <Box sx={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        height: '100vh', flexDirection: 'column', gap: 2
-      }}>
-        <CircularProgress color="success" size={50} />
-        <Typography sx={{ color: 'success.dark' }}>Loading GreenSupply Data...</Typography>
-      </Box>
-    );
-
+  // -------- Error State --------
   if (error)
     return (
       <Container sx={{ mt: 4 }}>
@@ -119,45 +91,19 @@ export default function Home() {
       </Container>
     );
 
+  // -------- Render --------
   return (
     <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
-      {/* Shared Header */}
       <GreenAppBar />
-
-      {/* Dashboard Content */}
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4, px: { xs: 2, md: 5 } }}>
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            color: '#2E7D32',
-            mb: 3,
-            letterSpacing: 0.3
-          }}
-        >
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#2E7D32', mb: 3, letterSpacing: 0.3 }}>
           Dashboard Overview
         </Typography>
 
         <Grid container spacing={3}>
-
           {/* KPI: Products Count */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card
-              elevation={2}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                p: 2,
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
-                boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
-                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 10px rgba(76,175,80,0.45)',
-                },
-              }}
-            >
+            <Card elevation={2} sx={styles.kpiCard}>
               <InventoryIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -172,22 +118,7 @@ export default function Home() {
 
           {/* KPI: Warehouses Count */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card
-              elevation={2}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                p: 2,
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
-                boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 10px rgba(76,175,80,0.45)',
-                },
-              }}
-            >
+            <Card elevation={2} sx={styles.kpiCard}>
               <WarehouseIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -202,20 +133,7 @@ export default function Home() {
 
           {/* KPI: Stock Value */}
           <Grid item xs={12} md={6}>
-            <Card
-              elevation={3}
-              sx={{
-                borderRadius: 3,
-                color: 'white',
-                background: 'linear-gradient(135deg, #66BB6A 30%, #388E3C 90%)',
-                boxShadow: '0 2px 6px rgba(56,142,60,0.45)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(56,142,60,0.55)',
-                },
-              }}
-            >
+            <Card elevation={3} sx={styles.valueCard}>
               <CardContent sx={{ display: 'flex', alignItems: 'center', p: '16px !important' }}>
                 <MonetizationOnIcon sx={{ fontSize: 40, mr: 2, opacity: 0.85 }} />
                 <Box>
@@ -223,7 +141,8 @@ export default function Home() {
                     Total Stock Value
                   </Typography>
                   <Typography variant="h5" fontWeight="bold">
-                    ${summaryData.totalValue.toLocaleString('en-US', {
+                    $
+                    {summaryData.totalValue.toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
                     })}
@@ -241,7 +160,7 @@ export default function Home() {
             <CategoryBarChart data={categoryStockData} />
           </Grid>
 
-          {/* Inventory Table */}
+          {/* Inventory Summary Table */}
           <Grid item xs={12}>
             <Card sx={{ mt: 3, borderRadius: 3, boxShadow: '0 3px 6px rgba(0,0,0,0.08)' }}>
               <CardContent>
@@ -272,12 +191,10 @@ export default function Home() {
                           key={row.id}
                           sx={{
                             backgroundColor: row.isLowStock ? '#FFF3E0' : 'inherit',
-                            '&:hover': {
-                              backgroundColor: 'rgba(76,175,80,0.08)'
-                            },
+                            '&:hover': { backgroundColor: 'rgba(76,175,80,0.08)' }
                           }}
                         >
-                          <TableCell component="th" scope="row">{row.name}</TableCell>
+                          <TableCell>{row.name}</TableCell>
                           <TableCell align="right">{row.category}</TableCell>
                           <TableCell align="right">{row.totalQuantity}</TableCell>
                           <TableCell align="right">{row.reorderPoint}</TableCell>
@@ -293,4 +210,68 @@ export default function Home() {
       </Container>
     </Box>
   );
+}
+
+// ---------- PAGE STYLES ----------
+const styles = {
+  kpiCard: {
+    display: 'flex',
+    alignItems: 'center',
+    p: 2,
+    borderRadius: 3,
+    background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
+    boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 10px rgba(76,175,80,0.45)',
+    },
+  },
+  valueCard: {
+    borderRadius: 3,
+    color: 'white',
+    background: 'linear-gradient(135deg, #66BB6A 30%, #388E3C 90%)',
+    boxShadow: '0 2px 6px rgba(56,142,60,0.45)',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 12px rgba(56,142,60,0.55)',
+    },
+  }
+};
+
+// ---------- SSR DATA FETCHING ----------
+export async function getServerSideProps() {
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+    const [productsRes, warehousesRes, stockRes] = await Promise.all([
+      fetch(`${baseUrl}/api/products`),
+      fetch(`${baseUrl}/api/warehouses`),
+      fetch(`${baseUrl}/api/stock`)
+    ]);
+
+    if (!productsRes.ok || !warehousesRes.ok || !stockRes.ok) {
+      throw new Error('Failed to fetch one or more API endpoints');
+    }
+
+    const [products, warehouses, stock] = await Promise.all([
+      productsRes.json(),
+      warehousesRes.json(),
+      stockRes.json()
+    ]);
+
+    return {
+      props: { products, warehouses, stock }
+    };
+  } catch (err) {
+    return {
+      props: {
+        products: [],
+        warehouses: [],
+        stock: [],
+        error: err.message || 'Unknown error while fetching SSR data'
+      }
+    };
+  }
 }

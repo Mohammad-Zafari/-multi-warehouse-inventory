@@ -1,101 +1,54 @@
 // pages/stock-transfer/index.js
 import React, { useEffect, useState } from 'react';
 import {
-  Container,
-  Box,
-  Typography,
-  Grid,
-  Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Button,
-  Snackbar,
-  Alert,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  CircularProgress,
+  Container, Box, Typography, Grid, Card, FormControl,
+  InputLabel, Select, MenuItem, TextField, Button, Snackbar,
+  Alert, Table, TableHead, TableBody, TableRow, TableCell,
+  CircularProgress, Divider, Grow,
 } from '@mui/material';
-import GreenAppBar from '../../components/GreenAppBar'; // ✅ اضافه شد
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import GreenAppBar from '@/components/GreenAppBar';
 
-export default function StockTransferPage() {
-  const [warehouses, setWarehouses] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [stock, setStock] = useState([]);
+export default function StockTransferPage({ warehouses, products, stock, error }) {
   const [transferHistory, setTransferHistory] = useState([]);
-
   const [fromWarehouse, setFromWarehouse] = useState('');
   const [toWarehouse, setToWarehouse] = useState('');
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
-
   const [snack, setSnack] = useState({ open: false, type: 'success', msg: '' });
-  const [loading, setLoading] = useState(true);
+  const [loadingTransfers, setLoadingTransfers] = useState(true);
 
   const handleSnackbarClose = () => setSnack({ ...snack, open: false });
 
-  // 🧠 Load data once
+  // ──────────────────────────────── Lazy Load: Transfer History ────────────────────────────────
   useEffect(() => {
-    async function loadData() {
+    async function loadTransferHistory() {
       try {
-        const [whRes, prodRes, stockRes, transferRes] = await Promise.all([
-          fetch('/api/warehouses'),
-          fetch('/api/products'),
-          fetch('/api/stock'),
-          fetch('/api/transfer'),
-        ]);
-
-        if (!whRes.ok || !prodRes.ok || !stockRes.ok || !transferRes.ok)
-          throw new Error('Failed to fetch resources.');
-
-        const [warehousesData, productsData, stockData, transferData] =
-          await Promise.all([
-            whRes.json(),
-            prodRes.json(),
-            stockRes.json(),
-            transferRes.json(),
-          ]);
-
-        setWarehouses(warehousesData);
-        setProducts(productsData);
-        setStock(stockData);
-        setTransferHistory(
-          transferData.map((t) => ({
-            id: t.id,
-            date: new Date(t.date).toLocaleString(),
-            fromWarehouse:
-              warehousesData.find((w) => w.id === t.fromWarehouseId)?.name ||
-              `Warehouse ${t.fromWarehouseId}`,
-            toWarehouse:
-              warehousesData.find((w) => w.id === t.toWarehouseId)?.name ||
-              `Warehouse ${t.toWarehouseId}`,
-            product:
-              productsData.find((p) => p.id === t.productId)?.name ||
-              `Product ${t.productId}`,
-            qty: t.quantity,
-          }))
-        );
+        const res = await fetch('/api/transfer');
+        if (!res.ok) throw new Error('Failed to fetch transfer history.');
+        const data = await res.json();
+        const mapped = data.map((t) => ({
+          id: t.id,
+          date: new Date(t.date).toLocaleString(),
+          fromWarehouse:
+            warehouses.find((w) => w.id === t.fromWarehouseId)?.name || `Warehouse ${t.fromWarehouseId}`,
+          toWarehouse:
+            warehouses.find((w) => w.id === t.toWarehouseId)?.name || `Warehouse ${t.toWarehouseId}`,
+          product:
+            products.find((p) => p.id === t.productId)?.name || `Product ${t.productId}`,
+          qty: t.quantity,
+        }));
+        setTransferHistory(mapped.reverse());
       } catch (err) {
-        console.error('❌ Error loading data:', err);
-        setSnack({
-          open: true,
-          type: 'error',
-          msg: 'Failed to load data from server.',
-        });
+        console.error('❌ History load error:', err);
+        setSnack({ open: true, type: 'error', msg: 'Failed to load transfer history.' });
       } finally {
-        setLoading(false);
+        setLoadingTransfers(false);
       }
     }
+    loadTransferHistory();
+  }, [warehouses, products]);
 
-    loadData();
-  }, []);
-
-  // 🔍 Filter products available in selected source warehouse
   const productsAvailableInSource = fromWarehouse
     ? products.filter((p) =>
         stock.some(
@@ -107,12 +60,6 @@ export default function StockTransferPage() {
       )
     : [];
 
-  // 🏭 Exclude source warehouse from destination list
-  const destinationWarehouses = warehouses.filter(
-    (w) => Number(w.id) !== Number(fromWarehouse)
-  );
-
-  // 🧾 Get current stock in selected source warehouse
   const currentStock =
     stock.find(
       (s) =>
@@ -120,47 +67,22 @@ export default function StockTransferPage() {
         Number(s.productId) === Number(productId)
     )?.quantity ?? 0;
 
-  // 📦 Handle transfer action
+  // ──────────────────────────────── Transfer Logic ────────────────────────────────
   const handleTransfer = async (e) => {
     e.preventDefault();
 
-    if (!fromWarehouse || !toWarehouse || !productId || !quantity) {
-      setSnack({ open: true, type: 'error', msg: 'Please fill in all fields.' });
-      return;
-    }
-
-    if (fromWarehouse === toWarehouse) {
-      setSnack({
-        open: true,
-        type: 'error',
-        msg: 'Source and destination warehouses cannot be the same.',
-      });
-      return;
-    }
+    if (!fromWarehouse || !toWarehouse || !productId || !quantity)
+      return setSnack({ open: true, type: 'error', msg: 'Please fill in all fields' });
+    if (fromWarehouse === toWarehouse)
+      return setSnack({ open: true, type: 'error', msg: 'Source and destination warehouses cannot be the same.' });
 
     const sourceRecord = stock.find(
-      (s) =>
-        Number(s.warehouseId) === Number(fromWarehouse) &&
-        Number(s.productId) === Number(productId)
+      (s) => Number(s.warehouseId) === Number(fromWarehouse) && Number(s.productId) === Number(productId)
     );
-
-    if (!sourceRecord) {
-      setSnack({
-        open: true,
-        type: 'error',
-        msg: 'This product is not available in the selected source warehouse.',
-      });
-      return;
-    }
-
-    if (Number(sourceRecord.quantity) < Number(quantity)) {
-      setSnack({
-        open: true,
-        type: 'error',
-        msg: 'Insufficient stock in the source warehouse.',
-      });
-      return;
-    }
+    if (!sourceRecord)
+      return setSnack({ open: true, type: 'error', msg: 'Product not available in selected source warehouse.' });
+    if (Number(sourceRecord.quantity) < Number(quantity))
+      return setSnack({ open: true, type: 'error', msg: 'Insufficient stock in source warehouse.' });
 
     try {
       const res = await fetch('/api/transfer', {
@@ -173,22 +95,14 @@ export default function StockTransferPage() {
           quantity: parseInt(quantity),
         }),
       });
-
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Transfer failed.');
+      if (!res.ok) throw new Error(data.message || 'Transfer failed');
 
-      setSnack({
-        open: true,
-        type: 'success',
-        msg: data?.message || 'Stock transferred successfully!',
-      });
+      setSnack({ open: true, type: 'success', msg: data?.message || 'Stock transferred!' });
 
-      // reload stock
+      // Refresh stock & transfer history
       const stockRes = await fetch('/api/stock');
       const newStock = await stockRes.json();
-      setStock(newStock);
-
-      // reload transfer history
       const transferRes = await fetch('/api/transfer');
       const updatedHistory = await transferRes.json();
       setTransferHistory(
@@ -196,221 +110,192 @@ export default function StockTransferPage() {
           id: t.id,
           date: new Date(t.date).toLocaleString(),
           fromWarehouse:
-            warehouses.find((w) => w.id === t.fromWarehouseId)?.name ||
-            `Warehouse ${t.fromWarehouseId}`,
+            warehouses.find((w) => w.id === t.fromWarehouseId)?.name || `Warehouse ${t.fromWarehouseId}`,
           toWarehouse:
-            warehouses.find((w) => w.id === t.toWarehouseId)?.name ||
-            `Warehouse ${t.toWarehouseId}`,
+            warehouses.find((w) => w.id === t.toWarehouseId)?.name || `Warehouse ${t.toWarehouseId}`,
           product:
-            products.find((p) => p.id === t.productId)?.name ||
-            `Product ${t.productId}`,
+            products.find((p) => p.id === t.productId)?.name || `Product ${t.productId}`,
           qty: t.quantity,
         }))
       );
-
-      // reset form
-      setFromWarehouse('');
-      setToWarehouse('');
-      setProductId('');
-      setQuantity('');
     } catch (err) {
-      console.error('❌ Transfer failed:', err);
-      setSnack({
-        open: true,
-        type: 'error',
-        msg: err.message || 'An error occurred while transferring stock.',
-      });
+      console.error(err);
+      setSnack({ open: true, type: 'error', msg: err.message });
     }
   };
 
-  // ⏳ Loader
-  if (loading) {
+  if (error) {
     return (
-      <>
-        <GreenAppBar /> {/* ✅ نمایش هدر در حالت لود */}
-        <Box sx={{ p: 8, textAlign: 'center' }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2, color: 'rgba(0,0,0,0.6)' }}>
-            Loading warehouses and products...
-          </Typography>
-        </Box>
-      </>
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="error">
+          <strong>Failed to load data from server.</strong>
+          <Typography variant="body2" sx={{ mt: 1 }}>{error}</Typography>
+        </Alert>
+      </Container>
     );
   }
 
+  // ──────────────────────────────── UI / Layout ────────────────────────────────
   return (
     <>
-      <GreenAppBar /> {/* ✅ هدر سبز در بالای صفحه */}
-
-      <Box sx={{ backgroundColor: '#F9FAFB', minHeight: '100vh', py: 6 }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 8, lg: 10 } }}>
+      <GreenAppBar />
+      <Box sx={{ backgroundColor: '#F4F6F8', minHeight: '100vh', py: 6 }}>
+        <Container maxWidth="lg">
           <Typography
             variant="h4"
-            sx={{
-              color: '#1B5E20',
-              fontWeight: 700,
-              mb: 4,
-              textShadow: '0 1px 1px rgba(0,0,0,0.15)',
-            }}
+            fontWeight={700}
+            color="success.main"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 5 }}
           >
-            Stock Transfer
+            <SwapHorizIcon /> Stock Transfer
           </Typography>
 
-          {/* --- Transfer Form --- */}
-          <Grid container spacing={4}>
-            {/* فرم انتقال */}
-            <Grid item xs={12} md={6}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" sx={{ color: '#1B5E20', fontWeight: 600, mb: 2 }}>
-                  Transfer Form
-                </Typography>
+          <Grid container spacing={4} alignItems="stretch">
+            {/* ▬▬▬ Transfer Form ▬▬▬ */}
+            <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+              <Grow in timeout={500} style={{ flexGrow: 1 }}>
+                <Card sx={styles.card}>
+                  <Typography variant="h6" fontWeight={600} color="success.main">
+                    Transfer Form
+                  </Typography>
+                  <Divider sx={{ my: 2 }} />
 
-                <form onSubmit={handleTransfer}>
-                  <Grid container spacing={2}>
-                    {/* From */}
-                    <Grid item xs={12}>
-                      <FormControl fullWidth>
-                        <InputLabel>From Warehouse</InputLabel>
-                        <Select
-                          value={fromWarehouse}
-                          label="From Warehouse"
-                          onChange={(e) => {
-                            setFromWarehouse(e.target.value);
-                            setProductId('');
-                          }}
+                  <form onSubmit={handleTransfer} style={{ flexGrow: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel>From Warehouse</InputLabel>
+                          <Select
+                            value={fromWarehouse}
+                            label="From Warehouse"
+                            onChange={(e) => {
+                              setFromWarehouse(e.target.value);
+                              setProductId('');
+                            }}
+                          >
+                            {warehouses.map((wh) => (
+                              <MenuItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel>To Warehouse</InputLabel>
+                          <Select
+                            value={toWarehouse}
+                            label="To Warehouse"
+                            onChange={(e) => setToWarehouse(e.target.value)}
+                          >
+                            {warehouses
+                              .filter((w) => Number(w.id) !== Number(fromWarehouse))
+                              .map((wh) => (
+                                <MenuItem key={wh.id} value={wh.id}>
+                                  {wh.name}
+                                </MenuItem>
+                              ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <FormControl fullWidth disabled={!fromWarehouse}>
+                          <InputLabel>Product</InputLabel>
+                          <Select
+                            value={productId}
+                            label="Product"
+                            onChange={(e) => setProductId(e.target.value)}
+                          >
+                            {productsAvailableInSource.map((p) => (
+                              <MenuItem key={p.id} value={p.id}>
+                                {p.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        {fromWarehouse && productId && (
+                          <Typography variant="body2" component="div" sx={{ mt: 1, color: '#388E3C' }}>
+                            Available in source: {currentStock} units
+                          </Typography>
+                        )}
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth type="number" label="Quantity"
+                          value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                          inputProps={{ min: 1 }}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sx={{ mt: 1 }}>
+                        <Button
+                          type="submit" fullWidth variant="contained"
+                          sx={styles.transferBtn}
                         >
-                          {warehouses.map((wh) => (
-                            <MenuItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                          TRANSFER STOCK
+                        </Button>
+                      </Grid>
                     </Grid>
-
-                    {/* To */}
-                    <Grid item xs={12}>
-                      <FormControl fullWidth>
-                        <InputLabel>To Warehouse</InputLabel>
-                        <Select
-                          value={toWarehouse}
-                          label="To Warehouse"
-                          onChange={(e) => setToWarehouse(e.target.value)}
-                        >
-                          {destinationWarehouses.map((wh) => (
-                            <MenuItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-
-                    {/* Product */}
-                    <Grid item xs={12}>
-                      <FormControl fullWidth disabled={!fromWarehouse}>
-                        <InputLabel>Product</InputLabel>
-                        <Select
-                          value={productId}
-                          label="Product"
-                          onChange={(e) => setProductId(e.target.value)}
-                        >
-                          {productsAvailableInSource.map((p) => (
-                            <MenuItem key={p.id} value={p.id}>
-                              {p.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      {fromWarehouse && productId && (
-                        <Typography variant="body2" sx={{ mt: 1, color: '#388E3C' }}>
-                          Available in source: {currentStock} units
-                        </Typography>
-                      )}
-                    </Grid>
-
-                    {/* Quantity */}
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Quantity"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        inputProps={{ min: 1 }}
-                      />
-                    </Grid>
-
-                    {/* Submit */}
-                    <Grid item xs={12} sx={{ mt: 2 }}>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        fullWidth
-                        sx={{
-                          py: 1.3,
-                          fontWeight: 600,
-                          backgroundColor: '#388E3C',
-                          '&:hover': { backgroundColor: '#2E7D32' },
-                        }}
-                      >
-                        Transfer Stock
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </form>
-              </Paper>
+                  </form>
+                </Card>
+              </Grow>
             </Grid>
 
-            {/* --- Stock Summary --- */}
-            <Grid item xs={12} md={6}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="subtitle1" sx={{ color: '#1B5E20', fontWeight: 600, mb: 2 }}>
-                  Current Stock Summary
-                </Typography>
-                {warehouses.map((wh) => (
-                  <Box key={wh.id} sx={{ mb: 2 }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ color: '#2E7D32', fontWeight: 600, mb: 0.5 }}
-                    >
-                      {wh.name}
-                    </Typography>
-                    {stock
-                      .filter((i) => Number(i.warehouseId) === Number(wh.id))
-                      .map((r) => {
-                        const productName = products.find(
-                          (p) => Number(p.id) === Number(r.productId)
-                        )?.name;
-                        return (
-                          <Typography
-                            key={r.id}
-                            variant="body2"
-                            sx={{ color: 'rgba(0,0,0,0.7)', pl: 2 }}
-                          >
-                            {productName ?? `Unknown Product (${r.productId})`}: {r.quantity ?? 0}
-                          </Typography>
-                        );
-                      })}
-                  </Box>
-                ))}
-              </Paper>
+            {/* ▬▬▬ Stock Summary ▬▬▬ */}
+            <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
+              <Grow in timeout={700} style={{ flexGrow: 1 }}>
+                <Card sx={styles.card}>
+                  <Typography variant="h6" fontWeight={600} color="success.main">
+                    Current Stock Summary
+                  </Typography>
+                  <Divider sx={{ my: 2 }} />
+                  {warehouses.map((wh) => (
+                    <Box key={wh.id} sx={styles.sectionBox}>
+                      <Typography variant="subtitle1" fontWeight={600} color="success.dark">
+                        {wh.name}
+                      </Typography>
+                      <Typography variant="body2" component="div" color="text.secondary">
+                        {stock
+                          .filter((i) => Number(i.warehouseId) === Number(wh.id))
+                          .map((r) => {
+                            const product = products.find((p) => Number(p.id) === Number(r.productId))?.name;
+                            return (
+                              <div key={r.id}>
+                                {product ?? `Unknown (${r.productId})`}: {r.quantity ?? 0}
+                              </div>
+                            );
+                          })}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Card>
+              </Grow>
             </Grid>
           </Grid>
 
-          {/* --- Transfer History --- */}
-          <Box sx={{ mt: 5 }}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-              <Typography variant="subtitle1" sx={{ color: '#1B5E20', fontWeight: 600, mb: 2 }}>
+          {/* ▬▬▬ Transfer History ▬▬▬ */}
+          <Grow in timeout={900}>
+            <Card sx={{ mt: 5, borderRadius: 3, p: 3 }}>
+              <Typography variant="h6" fontWeight={600} color="success.main">
                 Transfer History
               </Typography>
-              {transferHistory.length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.5)' }}>
-                  No transfers yet.
-                </Typography>
+              <Divider sx={{ my: 2 }} />
+              {loadingTransfers ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <CircularProgress color="success" size={32} />
+                  <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+                    Loading transfer history...
+                  </Typography>
+                </Box>
+              ) : transferHistory.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No transfers yet.</Typography>
               ) : (
                 <Table size="small">
-                  <TableHead>
+                  <TableHead sx={{ backgroundColor: 'success.light' }}>
                     <TableRow>
                       <TableCell>Date</TableCell>
                       <TableCell>From</TableCell>
@@ -421,7 +306,7 @@ export default function StockTransferPage() {
                   </TableHead>
                   <TableBody>
                     {transferHistory.map((t) => (
-                      <TableRow key={t.id}>
+                      <TableRow key={t.id} hover sx={{ '&:hover': { backgroundColor: '#F1F8E9' } }}>
                         <TableCell>{t.date}</TableCell>
                         <TableCell>{t.fromWarehouse}</TableCell>
                         <TableCell>{t.toWarehouse}</TableCell>
@@ -432,10 +317,9 @@ export default function StockTransferPage() {
                   </TableBody>
                 </Table>
               )}
-            </Paper>
-          </Box>
+            </Card>
+          </Grow>
 
-          {/* Snackbar */}
           <Snackbar
             open={snack.open}
             autoHideDuration={3500}
@@ -450,4 +334,70 @@ export default function StockTransferPage() {
       </Box>
     </>
   );
+}
+
+// ───────────────────────────── Styles ─────────────────────────────
+const styles = {
+  card: {
+    borderRadius: 3,
+    p: 3,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    backgroundColor: 'white',
+    height: '100%',
+    flexGrow: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  sectionBox: {
+    backgroundColor: '#f1f8e9',
+    p: 2,
+    borderRadius: 2,
+    mb: 2,
+  },
+  transferBtn: {
+    mt: 1,
+    py: 1.3,
+    fontWeight: 600,
+    letterSpacing: 0.5,
+    background: 'linear-gradient(135deg, #66BB6A, #388E3C)',
+    '&:hover': {
+      background: 'linear-gradient(135deg, #81C784, #2E7D32)',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 3px 8px rgba(56,142,60,0.3)',
+    },
+  },
+};
+
+// ───────────────────────────── SSR ─────────────────────────────
+export async function getServerSideProps() {
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+    const [warehousesRes, productsRes, stockRes] = await Promise.all([
+      fetch(`${baseUrl}/api/warehouses`),
+      fetch(`${baseUrl}/api/products`),
+      fetch(`${baseUrl}/api/stock`)
+    ]);
+
+    if (!warehousesRes.ok || !productsRes.ok || !stockRes.ok) {
+      throw new Error('Failed to fetch initial page data');
+    }
+
+    const [warehouses, products, stock] = await Promise.all([
+      warehousesRes.json(),
+      productsRes.json(),
+      stockRes.json()
+    ]);
+
+    return { props: { warehouses, products, stock } };
+  } catch (err) {
+    return {
+      props: {
+        warehouses: [],
+        products: [],
+        stock: [],
+        error: err.message || 'Unknown error while fetching SSR data'
+      }
+    };
+  }
 }

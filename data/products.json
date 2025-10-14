@@ -30,5 +30,13 @@
     "category": "Packaging",
     "unitCost": 0.45,
     "reorderPoint": 750
-  }
+  },
+  {
+  "id": 5,
+  "sku": "ECO-PKG-005",
+  "name": "Recyclable Paper Cup",
+  "category": "Packaging",
+  "unitCost": 0.25,
+  "reorderPoint": 500
+}
 ]

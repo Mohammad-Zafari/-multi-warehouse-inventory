@@ -1,5 +1,4 @@
-// pages/products/index.js
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Container,
@@ -19,26 +18,18 @@ import {
   DialogContentText,
   DialogTitle,
   Box,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SpaIcon from '@mui/icons-material/Spa';
-import GreenAppBar from '../../components/GreenAppBar'; // reusable Eco AppBar
+import GreenAppBar from '@/components/GreenAppBar';
 
-export default function Products() {
-  const [products, setProducts] = useState([]);
+export default function Products({ products: initialProducts, error }) {
+  const [products, setProducts] = useState(initialProducts || []);
   const [open, setOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = () => {
-    fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => setProducts(data));
-  };
+  const [actionError, setActionError] = useState(null);
 
   const handleClickOpen = (id) => {
     setSelectedProductId(id);
@@ -56,55 +47,67 @@ export default function Products() {
         method: 'DELETE',
       });
 
-      if (res.ok) {
-        setProducts(products.filter((product) => product.id !== selectedProductId));
-        handleClose();
-      }
-    } catch (error) {
-      console.error('Error deleting product:', error);
+      if (!res.ok) throw new Error('Failed to delete product.');
+
+      setProducts(products.filter((p) => p.id !== selectedProductId));
+      handleClose();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setActionError(err.message);
     }
   };
 
+  // ─────────────────────────────── UI ───────────────────────────────
   return (
     <>
-      {/* Green AppBar shared across app */}
       <GreenAppBar />
 
       <Container sx={{ mt: 4, mb: 4 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 3,
-          }}
-        >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography
             variant="h4"
             component="h1"
-            sx={{ color: '#2E7D32', fontWeight: 'bold' }}
+            fontWeight={700}
+            color="success.main"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
+            <SpaIcon color="success" />
             Products
           </Typography>
+
           <Button
             variant="contained"
-            sx={{
-              bgcolor: '#4CAF50',
-              '&:hover': { bgcolor: '#388E3C' },
-              color: '#fff',
-              textTransform: 'none',
-              fontWeight: 'bold',
-            }}
             component={Link}
             href="/products/add"
+            sx={{
+              bgcolor: '#4CAF50',
+              fontWeight: 600,
+              '&:hover': { bgcolor: '#388E3C' },
+              color: '#fff',
+            }}
           >
             + Add Product
           </Button>
         </Box>
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Failed to load data: {error}
+          </Alert>
+        )}
+
+        {actionError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {actionError}
+          </Alert>
+        )}
+
         <TableContainer
           component={Paper}
-          sx={{ borderRadius: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
+          sx={{
+            borderRadius: 2,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          }}
         >
           <Table>
             <TableHead sx={{ bgcolor: 'rgba(76,175,80,0.1)' }}>
@@ -129,7 +132,9 @@ export default function Products() {
                   <TableCell>{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
-                  <TableCell align="right">${product.unitCost.toFixed(2)}</TableCell>
+                  <TableCell align="right">
+                    ${product.unitCost.toFixed(2)}
+                  </TableCell>
                   <TableCell align="right">{product.reorderPoint}</TableCell>
                   <TableCell>
                     <IconButton
@@ -150,7 +155,7 @@ export default function Products() {
                   </TableCell>
                 </TableRow>
               ))}
-              {products.length === 0 && (
+              {products.length === 0 && !error && (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
                     No products available.
@@ -161,7 +166,7 @@ export default function Products() {
           </Table>
         </TableContainer>
 
-        {/* Delete Dialog */}
+        {/* Confirmation Dialog */}
         <Dialog open={open} onClose={handleClose}>
           <DialogTitle sx={{ fontWeight: 'bold', color: '#2E7D32' }}>
             Delete Product
@@ -198,4 +203,25 @@ export default function Products() {
       </Container>
     </>
   );
+}
+
+// ─────────────────────────────── SSR ───────────────────────────────
+export async function getServerSideProps() {
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/products`);
+
+    if (!res.ok) throw new Error('Failed to fetch products.');
+
+    const products = await res.json();
+    return { props: { products } };
+  } catch (err) {
+    console.error('SSR Error loading products:', err);
+    return {
+      props: {
+        products: [],
+        error: err.message || 'Unexpected error while loading products data.',
+      },
+    };
+  }
 }

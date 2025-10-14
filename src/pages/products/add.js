@@ -1,4 +1,3 @@
-// pages/products/add.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -10,8 +9,8 @@ import {
   Paper,
   Alert,
 } from '@mui/material';
-import GreenAppBar from '@/components/GreenAppbar'; // ✅ unified eco-green AppBar
-import NeutralInput from '@/components/NeutralInput'; // ✅ neutral gray-focus input
+import GreenAppBar from '@/components/GreenAppBar';
+import NeutralInput from '@/components/NeutralInput';
 
 export default function AddProduct() {
   const [product, setProduct] = useState({
@@ -21,7 +20,6 @@ export default function AddProduct() {
     unitCost: '',
     reorderPoint: '',
   });
-
   const [error, setError] = useState(null);
   const router = useRouter();
 
@@ -31,6 +29,13 @@ export default function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
+    // Basic validation
+    if (!product.sku || !product.name || !product.category) {
+      setError('Please fill in all required fields.');
+      return;
+    }
 
     try {
       const res = await fetch('/api/products', {
@@ -38,18 +43,23 @@ export default function AddProduct() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...product,
-          unitCost: parseFloat(product.unitCost),
-          reorderPoint: parseInt(product.reorderPoint),
+          unitCost: parseFloat(product.unitCost) || 0,
+          reorderPoint: parseInt(product.reorderPoint) || 0,
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to add product');
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Failed to add product');
+      }
+
       router.push('/products');
     } catch (err) {
       setError(err.message);
     }
   };
 
+  // ─────────────────────────────── UI ───────────────────────────────
   return (
     <>
       <GreenAppBar />
@@ -67,15 +77,17 @@ export default function AddProduct() {
             `,
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight={700}
+            color="success.main"
+            gutterBottom
+          >
             Add New Product
           </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
             <NeutralInput
@@ -112,9 +124,9 @@ export default function AddProduct() {
               margin="normal"
               required
               fullWidth
+              type="number"
               label="Unit Cost"
               name="unitCost"
-              type="number"
               inputProps={{ step: '0.01', min: '0' }}
               value={product.unitCost}
               onChange={handleChange}
@@ -124,9 +136,9 @@ export default function AddProduct() {
               margin="normal"
               required
               fullWidth
+              type="number"
               label="Reorder Point"
               name="reorderPoint"
-              type="number"
               inputProps={{ min: '0' }}
               value={product.reorderPoint}
               onChange={handleChange}
@@ -139,11 +151,13 @@ export default function AddProduct() {
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
               >
                 Add Product
               </Button>
+
               <Button
                 fullWidth
                 variant="outlined"
@@ -151,8 +165,9 @@ export default function AddProduct() {
                 href="/products"
                 sx={{
                   color: '#4CAF50',
+                  fontWeight: 600,
                   borderColor: '#4CAF50',
-                  '&:hover': { borderColor: '#43A047', color: '#43A047' },
+                  '&:hover': { color: '#43A047', borderColor: '#43A047' },
                 }}
               >
                 Cancel

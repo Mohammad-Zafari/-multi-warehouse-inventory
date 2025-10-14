@@ -1,4 +1,3 @@
-// pages/warehouses/add.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -10,8 +9,8 @@ import {
   Paper,
   Alert,
 } from '@mui/material';
-import GreenAppBar from '@/components/GreenAppbar'; // ✅ unified eco-green AppBar
-import NeutralInput from '@/components/NeutralInput'; // ✅ neutral gray-focus input
+import GreenAppBar from '@/components/GreenAppBar';
+import NeutralInput from '@/components/NeutralInput';
 
 export default function AddWarehouse() {
   const [warehouse, setWarehouse] = useState({
@@ -20,16 +19,23 @@ export default function AddWarehouse() {
     code: '',
   });
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  // handle change
   const handleChange = (e) => {
     setWarehouse({ ...warehouse, [e.target.name]: e.target.value });
   };
 
-  // handle submit
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (!warehouse.name || !warehouse.location || !warehouse.code) {
+      setError('All fields are required.');
+      return;
+    }
+
     try {
       const res = await fetch('/api/warehouses', {
         method: 'POST',
@@ -37,8 +43,10 @@ export default function AddWarehouse() {
         body: JSON.stringify(warehouse),
       });
 
-      if (!res.ok) throw new Error('Failed to add warehouse');
-      router.push('/warehouses');
+      if (!res.ok) throw new Error('Failed to add warehouse.');
+
+      setSuccess(true);
+      setTimeout(() => router.push('/warehouses'), 600); // ✅ short redirect delay for UX feedback
     } catch (err) {
       setError(err.message);
     }
@@ -61,13 +69,24 @@ export default function AddWarehouse() {
             `,
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight={700}
+            color="success.main"
+            gutterBottom
+          >
             Add New Warehouse
           </Typography>
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Warehouse added successfully!
             </Alert>
           )}
 
@@ -109,11 +128,13 @@ export default function AddWarehouse() {
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
               >
                 Add Warehouse
               </Button>
+
               <Button
                 fullWidth
                 variant="outlined"
@@ -122,6 +143,7 @@ export default function AddWarehouse() {
                 sx={{
                   color: '#4CAF50',
                   borderColor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': { borderColor: '#43A047', color: '#43A047' },
                 }}
               >

@@ -1,5 +1,4 @@
-// pages/stock/edit/[id].js
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
@@ -9,57 +8,15 @@ import {
   Box,
   Paper,
   MenuItem,
-  CircularProgress,
   Alert,
 } from '@mui/material';
-import GreenAppBar from '@/components/GreenAppbar';  // ✅ unified eco-green AppBar
-import NeutralInput from '@/components/NeutralInput'; // ✅ neutral-focus input
+import GreenAppBar from '@/components/GreenAppBar';
+import NeutralInput from '@/components/NeutralInput';
 
-export default function EditStock() {
-  const [stock, setStock] = useState({
-    productId: '',
-    warehouseId: '',
-    quantity: '',
-  });
-  const [products, setProducts] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
+export default function EditStock({ initialStock, products, warehouses, error }) {
+  const [stock, setStock] = useState(initialStock || {});
+  const [actionError, setActionError] = useState(null);
   const router = useRouter();
-  const { id } = router.query;
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (!id) return;
-      try {
-        const [stockRes, productRes, warehouseRes] = await Promise.all([
-          fetch(`/api/stock/${id}`),
-          fetch(`/api/products`),
-          fetch(`/api/warehouses`),
-        ]);
-
-        if (!stockRes.ok || !productRes.ok || !warehouseRes.ok)
-          throw new Error('Failed to load data');
-
-        const [stockData, productsData, warehousesData] = await Promise.all([
-          stockRes.json(),
-          productRes.json(),
-          warehouseRes.json(),
-        ]);
-
-        setStock(stockData);
-        setProducts(productsData);
-        setWarehouses(warehousesData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [id]);
 
   const handleChange = (e) => {
     setStock({ ...stock, [e.target.name]: e.target.value });
@@ -67,8 +24,10 @@ export default function EditStock() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setActionError(null);
+
     try {
-      const res = await fetch(`/api/stock/${id}`, {
+      const res = await fetch(`/api/stock/${stock.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,25 +37,30 @@ export default function EditStock() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to update stock');
+      if (!res.ok) throw new Error('Failed to update stock record.');
       router.push('/stock');
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
-  if (loading) {
+  if (error) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress color="success" />
-      </Box>
+      <>
+        <GreenAppBar />
+        <Container sx={{ mt: 10 }}>
+          <Alert severity="error">{error}</Alert>
+          <Button
+            sx={{ mt: 2 }}
+            variant="contained"
+            color="success"
+            component={Link}
+            href="/stock"
+          >
+            Back to Stock List
+          </Button>
+        </Container>
+      </>
     );
   }
 
@@ -117,13 +81,19 @@ export default function EditStock() {
             `,
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            color="success.main"
+            fontWeight={700}
+          >
             Edit Stock Record
           </Typography>
 
-          {error && (
+          {actionError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
+              {actionError}
             </Alert>
           )}
 
@@ -135,7 +105,7 @@ export default function EditStock() {
               fullWidth
               label="Product"
               name="productId"
-              value={stock.productId}
+              value={stock.productId || ''}
               onChange={handleChange}
             >
               {products.map((p) => (
@@ -152,7 +122,7 @@ export default function EditStock() {
               fullWidth
               label="Warehouse"
               name="warehouseId"
-              value={stock.warehouseId}
+              value={stock.warehouseId || ''}
               onChange={handleChange}
             >
               {warehouses.map((w) => (
@@ -166,11 +136,11 @@ export default function EditStock() {
               margin="normal"
               required
               fullWidth
+              type="number"
               label="Quantity"
               name="quantity"
-              type="number"
               inputProps={{ min: '0' }}
-              value={stock.quantity}
+              value={stock.quantity || ''}
               onChange={handleChange}
             />
 
@@ -181,6 +151,7 @@ export default function EditStock() {
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
               >
@@ -195,9 +166,10 @@ export default function EditStock() {
                 sx={{
                   color: '#4CAF50',
                   borderColor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': {
-                    borderColor: '#43A047',
                     color: '#43A047',
+                    borderColor: '#43A047',
                   },
                 }}
               >
@@ -209,4 +181,41 @@ export default function EditStock() {
       </Container>
     </>
   );
+}
+
+// ─────────────────────────────── SSR
+export async function getServerSideProps(context) {
+  const { id } = context.params;
+
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+    const [stockRes, productsRes, warehousesRes] = await Promise.all([
+      fetch(`${baseUrl}/api/stock/${id}`),
+      fetch(`${baseUrl}/api/products`),
+      fetch(`${baseUrl}/api/warehouses`),
+    ]);
+
+    if (!stockRes.ok || !productsRes.ok || !warehousesRes.ok) {
+      throw new Error('Failed to fetch stock or related data.');
+    }
+
+    const [initialStock, products, warehouses] = await Promise.all([
+      stockRes.json(),
+      productsRes.json(),
+      warehousesRes.json(),
+    ]);
+
+    return { props: { initialStock, products, warehouses } };
+  } catch (err) {
+    console.error('SSR Error [stock/edit/[id]]:', err);
+    return {
+      props: {
+        initialStock: null,
+        products: [],
+        warehouses: [],
+        error: err.message || 'Server failed to load data.',
+      },
+    };
+  }
 }

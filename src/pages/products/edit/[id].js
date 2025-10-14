@@ -1,49 +1,21 @@
-// pages/products/edit/[id].js
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   Container,
   Typography,
   Button,
   Box,
   Paper,
-  CircularProgress,
   Alert,
 } from '@mui/material';
-import GreenAppBar from '@/components/GreenAppbar'; // ✅ eco‑green AppBar
-import NeutralInput from '@/components/NeutralInput'; // ✅ neutral gray‑focus input
+import GreenAppBar from '@/components/GreenAppBar';
+import NeutralInput from '@/components/NeutralInput';
 
-export default function EditProduct() {
-  const [product, setProduct] = useState({
-    sku: '',
-    name: '',
-    category: '',
-    unitCost: '',
-    reorderPoint: '',
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
+export default function EditProduct({ product: initialProduct, error }) {
+  const [product, setProduct] = useState(initialProduct || {});
+  const [actionError, setActionError] = useState(null);
   const router = useRouter();
-  const { id } = router.query;
-
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!id) return;
-      try {
-        const res = await fetch(`/api/products/${id}`);
-        if (!res.ok) throw new Error('Failed to fetch product data');
-        const data = await res.json();
-        setProduct(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProduct();
-  }, [id]);
 
   const handleChange = (e) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
@@ -51,8 +23,10 @@ export default function EditProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setActionError(null);
+
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,25 +35,31 @@ export default function EditProduct() {
           reorderPoint: parseInt(product.reorderPoint),
         }),
       });
-      if (!res.ok) throw new Error('Failed to update product');
+
+      if (!res.ok) throw new Error('Failed to update product.');
       router.push('/products');
     } catch (err) {
-      setError(err.message);
+      setActionError(err.message);
     }
   };
 
-  if (loading) {
+  if (error) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress color="success" />
-      </Box>
+      <>
+        <GreenAppBar />
+        <Container sx={{ mt: 10 }}>
+          <Alert severity="error">{error}</Alert>
+          <Button
+            sx={{ mt: 2 }}
+            variant="contained"
+            color="success"
+            component={Link}
+            href="/products"
+          >
+            Back to Products
+          </Button>
+        </Container>
+      </>
     );
   }
 
@@ -100,24 +80,35 @@ export default function EditProduct() {
             `,
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight={700}
+            color="success.main"
+            gutterBottom
+          >
             Edit Product
           </Typography>
 
-          {error && (
+          {actionError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
+              {actionError}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            noValidate
+            sx={{ mt: 2 }}
+          >
             <NeutralInput
               margin="normal"
               required
               fullWidth
               label="SKU"
               name="sku"
-              value={product.sku}
+              value={product.sku || ''}
               onChange={handleChange}
             />
 
@@ -127,7 +118,7 @@ export default function EditProduct() {
               fullWidth
               label="Product Name"
               name="name"
-              value={product.name}
+              value={product.name || ''}
               onChange={handleChange}
             />
 
@@ -137,7 +128,7 @@ export default function EditProduct() {
               fullWidth
               label="Category"
               name="category"
-              value={product.category}
+              value={product.category || ''}
               onChange={handleChange}
             />
 
@@ -145,11 +136,11 @@ export default function EditProduct() {
               margin="normal"
               required
               fullWidth
+              type="number"
               label="Unit Cost"
               name="unitCost"
-              type="number"
               inputProps={{ step: '0.01', min: '0' }}
-              value={product.unitCost}
+              value={product.unitCost || ''}
               onChange={handleChange}
             />
 
@@ -157,11 +148,11 @@ export default function EditProduct() {
               margin="normal"
               required
               fullWidth
+              type="number"
               label="Reorder Point"
               name="reorderPoint"
-              type="number"
               inputProps={{ min: '0' }}
-              value={product.reorderPoint}
+              value={product.reorderPoint || ''}
               onChange={handleChange}
             />
 
@@ -172,12 +163,12 @@ export default function EditProduct() {
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
+                  fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
               >
                 Update Product
               </Button>
-
               <Button
                 fullWidth
                 variant="outlined"
@@ -185,6 +176,7 @@ export default function EditProduct() {
                 href="/products"
                 sx={{
                   color: '#4CAF50',
+                  fontWeight: 600,
                   borderColor: '#4CAF50',
                   '&:hover': {
                     borderColor: '#43A047',
@@ -200,4 +192,27 @@ export default function EditProduct() {
       </Container>
     </>
   );
+}
+
+// ─────────────────────────────── SSR
+export async function getServerSideProps(context) {
+  const { id } = context.params;
+
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/products/${id}`);
+
+    if (!res.ok) throw new Error('Product not found.');
+
+    const product = await res.json();
+    return { props: { product } };
+  } catch (err) {
+    console.error('SSR Error [edit/[id]]:', err);
+    return {
+      props: {
+        product: null,
+        error: err.message || 'Failed to load product data.',
+      },
+    };
+  }
 }

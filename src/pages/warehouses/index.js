@@ -1,5 +1,3 @@
-// pages/warehouses/index.js
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Container,
@@ -24,29 +22,13 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import GreenAppBar from '@/components/GreenAppBar';
+import { useState } from 'react';
 
-export default function Warehouses() {
-  const [warehouses, setWarehouses] = useState([]);
+export default function Warehouses({ warehouses: initialWarehouses, error }) {
+  const [warehouses, setWarehouses] = useState(initialWarehouses || []);
   const [open, setOpen] = useState(false);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchWarehouses();
-  }, []);
-
-  const fetchWarehouses = async () => {
-    try {
-      const res = await fetch('/api/warehouses');
-      if (!res.ok) {
-        throw new Error('Failed to fetch warehouses');
-      }
-      const data = await res.json();
-      setWarehouses(data);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+  const [actionError, setActionError] = useState(null);
 
   const handleClickOpen = (id) => {
     setSelectedWarehouseId(id);
@@ -60,50 +42,56 @@ export default function Warehouses() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`/api/warehouses/${selectedWarehouseId}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        setWarehouses(warehouses.filter((warehouse) => warehouse.id !== selectedWarehouseId));
-        handleClose();
-      } else {
-        throw new Error('Failed to delete warehouse');
-      }
-    } catch (error) {
-      console.error('Error deleting warehouse:', error);
-      // Optionally, show an error to the user
+      const res = await fetch(`/api/warehouses/${selectedWarehouseId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete warehouse.');
+      setWarehouses(warehouses.filter((w) => w.id !== selectedWarehouseId));
+      handleClose();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setActionError(err.message);
     }
   };
 
+  // ──────────────────────────────── UI ────────────────────────────────
   return (
     <>
-      <GreenAppBar /> {/* <-- Using the new, consistent AppBar */}
+      <GreenAppBar />
 
       <Container sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
+          <Typography variant="h4" component="h1" color="success.main" fontWeight={700}>
             Warehouses
           </Typography>
           <Button
             variant="contained"
             component={Link}
             href="/warehouses/add"
-            sx={{ 
-              bgcolor: '#4CAF50', 
-              '&:hover': { bgcolor: '#45a049' } 
+            sx={{
+              bgcolor: '#4CAF50',
+              fontWeight: 600,
+              '&:hover': { bgcolor: '#45a049' },
             }}
           >
             Add Warehouse
           </Button>
         </Box>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {/* Error Messages */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Failed to load data: {error}
+          </Alert>
+        )}
+        {actionError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {actionError}
+          </Alert>
+        )}
 
+        {/* Table Display */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              {/* Themed Table Header */}
               <TableRow sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)' }}>
                 <TableCell><strong>Code</strong></TableCell>
                 <TableCell><strong>Name</strong></TableCell>
@@ -119,7 +107,7 @@ export default function Warehouses() {
                   <TableCell>{warehouse.location}</TableCell>
                   <TableCell>
                     <IconButton
-                      color="primary" // This will inherit green from the theme later
+                      color="primary"
                       component={Link}
                       href={`/warehouses/edit/${warehouse.id}`}
                       size="small"
@@ -147,6 +135,7 @@ export default function Warehouses() {
           </Table>
         </TableContainer>
 
+        {/* Delete confirmation dialog */}
         <Dialog open={open} onClose={handleClose}>
           <DialogTitle>Delete Warehouse</DialogTitle>
           <DialogContent>
@@ -164,4 +153,25 @@ export default function Warehouses() {
       </Container>
     </>
   );
+}
+
+// ──────────────────────────────── SSR ────────────────────────────────
+export async function getServerSideProps() {
+  try {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/warehouses`);
+
+    if (!res.ok) throw new Error('Failed to fetch warehouses.');
+
+    const warehouses = await res.json();
+    return { props: { warehouses } };
+  } catch (err) {
+    console.error('SSR Error loading warehouses:', err);
+    return {
+      props: {
+        warehouses: [],
+        error: err.message || 'Unexpected error while loading warehouses.',
+      },
+    };
+  }
 }
