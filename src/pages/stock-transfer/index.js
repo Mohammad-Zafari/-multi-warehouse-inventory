@@ -9,8 +9,18 @@ import {
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import GreenAppBar from '@/components/GreenAppBar';
 
-export default function StockTransferPage({ warehouses, products, stock, error }) {
+// ───────────────────────────── Component ─────────────────────────────
+export default function StockTransferPage({
+  warehouses: initialWarehouses,
+  products: initialProducts,
+  stock: initialStock,
+  error,
+}) {
+  const [warehouses, setWarehouses] = useState(initialWarehouses || []);
+  const [products, setProducts] = useState(initialProducts || []);
+  const [stock, setStock] = useState(initialStock || []);
   const [transferHistory, setTransferHistory] = useState([]);
+
   const [fromWarehouse, setFromWarehouse] = useState('');
   const [toWarehouse, setToWarehouse] = useState('');
   const [productId, setProductId] = useState('');
@@ -49,6 +59,61 @@ export default function StockTransferPage({ warehouses, products, stock, error }
     loadTransferHistory();
   }, [warehouses, products]);
 
+  // ──────────────────────────────── Auto Re-fetch (Hybrid SSR) ────────────────────────────────
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        const [wRes, pRes, sRes, tRes] = await Promise.all([
+          fetch('/api/warehouses'),
+          fetch('/api/products'),
+          fetch('/api/stock'),
+          fetch('/api/transfer'),
+        ]);
+        if (!wRes.ok || !pRes.ok || !sRes.ok || !tRes.ok)
+          throw new Error('Failed to refresh data');
+        const [w, p, s, t] = await Promise.all([
+          wRes.json(),
+          pRes.json(),
+          sRes.json(),
+          tRes.json(),
+        ]);
+
+        if (isMounted) {
+          setWarehouses(() => w);
+          setProducts(() => p);
+          setStock(() => s);
+
+          const mapped = t.map((tr) => ({
+            id: tr.id,
+            date: new Date(tr.date).toLocaleString(),
+            fromWarehouse:
+              w.find((wh) => wh.id === tr.fromWarehouseId)?.name ||
+              `Warehouse ${tr.fromWarehouseId}`,
+            toWarehouse:
+              w.find((wh) => wh.id === tr.toWarehouseId)?.name ||
+              `Warehouse ${tr.toWarehouseId}`,
+            product:
+              p.find((pr) => pr.id === tr.productId)?.name ||
+              `Product ${tr.productId}`,
+            qty: tr.quantity,
+          }));
+          setTransferHistory(mapped.reverse());
+        }
+      } catch (err) {
+        console.error('♻️ auto-refresh error:', err);
+      }
+    };
+
+    const timer = setInterval(fetchData, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // ──────────────────────────────── Derived Data ────────────────────────────────
   const productsAvailableInSource = fromWarehouse
     ? products.filter((p) =>
         stock.some(
@@ -74,15 +139,29 @@ export default function StockTransferPage({ warehouses, products, stock, error }
     if (!fromWarehouse || !toWarehouse || !productId || !quantity)
       return setSnack({ open: true, type: 'error', msg: 'Please fill in all fields' });
     if (fromWarehouse === toWarehouse)
-      return setSnack({ open: true, type: 'error', msg: 'Source and destination warehouses cannot be the same.' });
+      return setSnack({
+        open: true,
+        type: 'error',
+        msg: 'Source and destination warehouses cannot be the same.',
+      });
 
     const sourceRecord = stock.find(
-      (s) => Number(s.warehouseId) === Number(fromWarehouse) && Number(s.productId) === Number(productId)
+      (s) =>
+        Number(s.warehouseId) === Number(fromWarehouse) &&
+        Number(s.productId) === Number(productId)
     );
     if (!sourceRecord)
-      return setSnack({ open: true, type: 'error', msg: 'Product not available in selected source warehouse.' });
+      return setSnack({
+        open: true,
+        type: 'error',
+        msg: 'Product not available in selected source warehouse.',
+      });
     if (Number(sourceRecord.quantity) < Number(quantity))
-      return setSnack({ open: true, type: 'error', msg: 'Insufficient stock in source warehouse.' });
+      return setSnack({
+        open: true,
+        type: 'error',
+        msg: 'Insufficient stock in source warehouse.',
+      });
 
     try {
       const res = await fetch('/api/transfer', {
@@ -100,24 +179,26 @@ export default function StockTransferPage({ warehouses, products, stock, error }
 
       setSnack({ open: true, type: 'success', msg: data?.message || 'Stock transferred!' });
 
-      // Refresh stock & transfer history
+      // Refresh stock & transfer history immediately
       const stockRes = await fetch('/api/stock');
       const newStock = await stockRes.json();
       const transferRes = await fetch('/api/transfer');
       const updatedHistory = await transferRes.json();
-      setTransferHistory(
-        updatedHistory.map((t) => ({
-          id: t.id,
-          date: new Date(t.date).toLocaleString(),
-          fromWarehouse:
-            warehouses.find((w) => w.id === t.fromWarehouseId)?.name || `Warehouse ${t.fromWarehouseId}`,
-          toWarehouse:
-            warehouses.find((w) => w.id === t.toWarehouseId)?.name || `Warehouse ${t.toWarehouseId}`,
-          product:
-            products.find((p) => p.id === t.productId)?.name || `Product ${t.productId}`,
-          qty: t.quantity,
-        }))
-      );
+
+      const mapped = updatedHistory.map((t) => ({
+        id: t.id,
+        date: new Date(t.date).toLocaleString(),
+        fromWarehouse:
+          warehouses.find((w) => w.id === t.fromWarehouseId)?.name || `Warehouse ${t.fromWarehouseId}`,
+        toWarehouse:
+          warehouses.find((w) => w.id === t.toWarehouseId)?.name || `Warehouse ${t.toWarehouseId}`,
+        product:
+          products.find((p) => p.id === t.productId)?.name || `Product ${t.productId}`,
+        qty: t.quantity,
+      }));
+
+      setTransferHistory(mapped.reverse());
+      setStock(newStock);
     } catch (err) {
       console.error(err);
       setSnack({ open: true, type: 'error', msg: err.message });
@@ -129,7 +210,9 @@ export default function StockTransferPage({ warehouses, products, stock, error }
       <Container sx={{ mt: 4 }}>
         <Alert severity="error">
           <strong>Failed to load data from server.</strong>
-          <Typography variant="body2" sx={{ mt: 1 }}>{error}</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {error}
+          </Typography>
         </Alert>
       </Container>
     );
@@ -217,7 +300,11 @@ export default function StockTransferPage({ warehouses, products, stock, error }
                           </Select>
                         </FormControl>
                         {fromWarehouse && productId && (
-                          <Typography variant="body2" component="div" sx={{ mt: 1, color: '#388E3C' }}>
+                          <Typography
+                            variant="body2"
+                            component="div"
+                            sx={{ mt: 1, color: '#388E3C' }}
+                          >
                             Available in source: {currentStock} units
                           </Typography>
                         )}
@@ -225,17 +312,17 @@ export default function StockTransferPage({ warehouses, products, stock, error }
 
                       <Grid item xs={12}>
                         <TextField
-                          fullWidth type="number" label="Quantity"
-                          value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                          fullWidth
+                          type="number"
+                          label="Quantity"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
                           inputProps={{ min: 1 }}
                         />
                       </Grid>
 
                       <Grid item xs={12} sx={{ mt: 1 }}>
-                        <Button
-                          type="submit" fullWidth variant="contained"
-                          sx={styles.transferBtn}
-                        >
+                        <Button type="submit" fullWidth variant="contained" sx={styles.transferBtn}>
                           TRANSFER STOCK
                         </Button>
                       </Grid>
@@ -262,7 +349,9 @@ export default function StockTransferPage({ warehouses, products, stock, error }
                         {stock
                           .filter((i) => Number(i.warehouseId) === Number(wh.id))
                           .map((r) => {
-                            const product = products.find((p) => Number(p.id) === Number(r.productId))?.name;
+                            const product = products.find(
+                              (p) => Number(p.id) === Number(r.productId)
+                            )?.name;
                             return (
                               <div key={r.id}>
                                 {product ?? `Unknown (${r.productId})`}: {r.quantity ?? 0}
@@ -292,7 +381,9 @@ export default function StockTransferPage({ warehouses, products, stock, error }
                   </Typography>
                 </Box>
               ) : transferHistory.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">No transfers yet.</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  No transfers yet.
+                </Typography>
               ) : (
                 <Table size="small">
                   <TableHead sx={{ backgroundColor: 'success.light' }}>
@@ -306,7 +397,11 @@ export default function StockTransferPage({ warehouses, products, stock, error }
                   </TableHead>
                   <TableBody>
                     {transferHistory.map((t) => (
-                      <TableRow key={t.id} hover sx={{ '&:hover': { backgroundColor: '#F1F8E9' } }}>
+                      <TableRow
+                        key={t.id}
+                        hover
+                        sx={{ '&:hover': { backgroundColor: '#F1F8E9' } }}
+                      >
                         <TableCell>{t.date}</TableCell>
                         <TableCell>{t.fromWarehouse}</TableCell>
                         <TableCell>{t.toWarehouse}</TableCell>
@@ -372,23 +467,19 @@ const styles = {
 export async function getServerSideProps() {
   try {
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-
     const [warehousesRes, productsRes, stockRes] = await Promise.all([
       fetch(`${baseUrl}/api/warehouses`),
       fetch(`${baseUrl}/api/products`),
-      fetch(`${baseUrl}/api/stock`)
+      fetch(`${baseUrl}/api/stock`),
     ]);
-
     if (!warehousesRes.ok || !productsRes.ok || !stockRes.ok) {
       throw new Error('Failed to fetch initial page data');
     }
-
     const [warehouses, products, stock] = await Promise.all([
       warehousesRes.json(),
       productsRes.json(),
-      stockRes.json()
+      stockRes.json(),
     ]);
-
     return { props: { warehouses, products, stock } };
   } catch (err) {
     return {
@@ -396,8 +487,8 @@ export async function getServerSideProps() {
         warehouses: [],
         products: [],
         stock: [],
-        error: err.message || 'Unknown error while fetching SSR data'
-      }
+        error: err.message || 'Unknown error while fetching SSR data',
+      },
     };
   }
 }

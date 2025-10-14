@@ -27,7 +27,7 @@
     "id": 5,
     "productId": 3,
     "warehouseId": 1,
-    "quantity": 2500
+    "quantity": 2290
   },
   {
     "id": 6,
@@ -64,5 +64,11 @@
     "warehouseId": 2,
     "productId": 2,
     "quantity": 112
+  },
+  {
+    "id": 12,
+    "warehouseId": 3,
+    "productId": 3,
+    "quantity": 210
   }
 ]

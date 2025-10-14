@@ -22,7 +22,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import GreenAppBar from '@/components/GreenAppBar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Warehouses({ warehouses: initialWarehouses, error }) {
   const [warehouses, setWarehouses] = useState(initialWarehouses || []);
@@ -30,6 +30,29 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
+  // ──────────────────────────────── Auto Re-fetch (5s) ────────────────────────────────
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchWarehouses = async () => {
+      try {
+        const res = await fetch('/api/warehouses');
+        if (!res.ok) throw new Error('Failed to re-fetch warehouses.');
+        const data = await res.json();
+        if (isMounted) setWarehouses(data);
+      } catch (err) {
+        console.error('Re-fetch error:', err);
+      }
+    };
+
+    const interval = setInterval(fetchWarehouses, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // ──────────────────────────────── Delete Logic ────────────────────────────────
   const handleClickOpen = (id) => {
     setSelectedWarehouseId(id);
     setOpen(true);
@@ -44,7 +67,7 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
     try {
       const res = await fetch(`/api/warehouses/${selectedWarehouseId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete warehouse.');
-      setWarehouses(warehouses.filter((w) => w.id !== selectedWarehouseId));
+      setWarehouses((prev) => prev.filter((w) => w.id !== selectedWarehouseId));
       handleClose();
     } catch (err) {
       console.error('Delete error:', err);
@@ -56,7 +79,6 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   return (
     <>
       <GreenAppBar />
-
       <Container sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" color="success.main" fontWeight={700}>
@@ -99,6 +121,7 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
                 <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
               {warehouses.map((warehouse) => (
                 <TableRow key={warehouse.id} hover>
@@ -124,6 +147,7 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
                   </TableCell>
                 </TableRow>
               ))}
+
               {warehouses.length === 0 && !error && (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
@@ -160,9 +184,7 @@ export async function getServerSideProps() {
   try {
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/warehouses`);
-
     if (!res.ok) throw new Error('Failed to fetch warehouses.');
-
     const warehouses = await res.json();
     return { props: { warehouses } };
   } catch (err) {

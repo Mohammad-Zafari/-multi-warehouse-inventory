@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Container,
@@ -43,19 +43,32 @@ export default function Products({ products: initialProducts, error }) {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`/api/products/${selectedProductId}`, {
-        method: 'DELETE',
-      });
-
+      const res = await fetch(`/api/products/${selectedProductId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete product.');
-
-      setProducts(products.filter((p) => p.id !== selectedProductId));
+      setProducts((prev) => prev.filter((p) => p.id !== selectedProductId));
       handleClose();
     } catch (err) {
       console.error('Delete error:', err);
       setActionError(err.message);
     }
   };
+
+  // ─────────────────────────────── Re-fetch Interval ───────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/products');
+        if (!res.ok) throw new Error('Failed to fetch updated products.');
+        const updatedProducts = await res.json();
+        setProducts(updatedProducts);
+      } catch (err) {
+        console.error('Auto refresh error:', err);
+      }
+    }, 5000);
+
+    // cleanup
+    return () => clearInterval(interval);
+  }, []);
 
   // ─────────────────────────────── UI ───────────────────────────────
   return (
@@ -132,9 +145,7 @@ export default function Products({ products: initialProducts, error }) {
                   <TableCell>{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
-                  <TableCell align="right">
-                    ${product.unitCost.toFixed(2)}
-                  </TableCell>
+                  <TableCell align="right">${product.unitCost.toFixed(2)}</TableCell>
                   <TableCell align="right">{product.reorderPoint}</TableCell>
                   <TableCell>
                     <IconButton
@@ -210,9 +221,7 @@ export async function getServerSideProps() {
   try {
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/products`);
-
     if (!res.ok) throw new Error('Failed to fetch products.');
-
     const products = await res.json();
     return { props: { products } };
   } catch (err) {
