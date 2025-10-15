@@ -1,3 +1,5 @@
+// File: /components/GreenAppBar.js
+
 import { AppBar, Toolbar, Typography, Button } from "@mui/material";
 import SpaIcon from "@mui/icons-material/Spa";
 import Link from "next/link";
@@ -13,9 +15,13 @@ export default function GreenAppBar() {
     >
       <Toolbar>
         <SpaIcon sx={{ mr: 2 }} />
-        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
+        <Typography
+          variant="h6"
+          sx={{ flexGrow: 1, fontWeight: "bold" }}
+        >
           GreenSupply Co.
         </Typography>
+
         <Button color="inherit" component={Link} href="/">
           Dashboard
         </Button>
@@ -27,9 +33,13 @@ export default function GreenAppBar() {
         </Button>
         <Button color="inherit" component={Link} href="/stock">
           Stock
-        </Button>{" "}
+        </Button>
         <Button color="inherit" component={Link} href="/stock-transfer">
           Transfer
+        </Button>
+        {/* ✅ Added alert link in same style */}
+        <Button color="inherit" component={Link} href="/alerts">
+          Alerts
         </Button>
       </Toolbar>
     </AppBar>

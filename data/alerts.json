@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "productId": 1,
+    "warehouseId": 1,
+    "quantity": 7,
+    "productName": "Bamboo Spork Set",
+    "warehouseName": "Main Distribution Center",
+    "reorderPoint": 100,
+    "isLow": true
+  },
+  {
+    "id": 2,
+    "productId": 1,
+    "warehouseId": 2,
+    "quantity": 33,
+    "productName": "Bamboo Spork Set",
+    "warehouseName": "West Coast Facility",
+    "reorderPoint": 100,
+    "isLow": true
+  },
+  {
+    "id": 8,
+    "productId": 4,
+    "warehouseId": 2,
+    "quantity": 600,
+    "productName": "Recyclable Paper Bowl",
+    "warehouseName": "West Coast Facility",
+    "reorderPoint": 750,
+    "isLow": true
+  },
+  {
+    "id": 9,
+    "productId": 5,
+    "warehouseId": 2,
+    "quantity": 450,
+    "productName": "Recyclable Paper Cup",
+    "warehouseName": "West Coast Facility",
+    "reorderPoint": 500,
+    "isLow": true
+  },
+  {
+    "id": 11,
+    "warehouseId": 2,
+    "productId": 2,
+    "quantity": 1,
+    "productName": "Compostable Food Container 32oz",
+    "warehouseName": "West Coast Facility",
+    "reorderPoint": 500,
+    "isLow": true
+  },
+  {
+    "id": 12,
+    "warehouseId": 3,
+    "productId": 3,
+    "quantity": 0,
+    "productName": "Wooden Chopsticks",
+    "warehouseName": "Southern Hub",
+    "reorderPoint": 1000,
+    "isLow": true
+  }
+]
