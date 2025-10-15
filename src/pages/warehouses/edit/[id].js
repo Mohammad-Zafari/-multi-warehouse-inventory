@@ -8,34 +8,60 @@ import {
   Box,
   Paper,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
 import NeutralInput from '@/components/NeutralInput';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 export default function EditWarehouse({ initialWarehouse, error }) {
   const router = useRouter();
   const [warehouse, setWarehouse] = useState(initialWarehouse || {});
   const [actionError, setActionError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setWarehouse({ ...warehouse, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    setWarehouse({ ...warehouse, [event.target.name]: event.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validate = (data) => {
+    if (!data.code?.trim() || !data.name?.trim() || !data.location?.trim()) {
+      return 'All fields are required.';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setActionError(null);
 
+    const validationError = validate(warehouse);
+    if (validationError) {
+      setActionError(validationError);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch(`/api/warehouses/${warehouse.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(warehouse),
+        body: JSON.stringify({
+          code: warehouse.code.trim(),
+          name: warehouse.name.trim(),
+          location: warehouse.location.trim(),
+        }),
       });
 
-      if (!res.ok) throw new Error('Failed to update warehouse record.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(data.message || 'Failed to update warehouse.');
+
       router.push('/warehouses');
     } catch (err) {
       setActionError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,14 +69,14 @@ export default function EditWarehouse({ initialWarehouse, error }) {
     return (
       <>
         <GreenAppBar />
-        <Container sx={{ mt: 10 }}>
+        <Container sx={{ py: { xs: 3, sm: 5 }, textAlign: 'center' }}>
           <Alert severity="error">{error}</Alert>
           <Button
             sx={{ mt: 2 }}
             variant="contained"
-            color="success"
             component={Link}
             href="/warehouses"
+            color="success"
           >
             Back to Warehouses
           </Button>
@@ -62,91 +88,92 @@ export default function EditWarehouse({ initialWarehouse, error }) {
   return (
     <>
       <GreenAppBar />
-
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="sm" sx={{ py: { xs: 3, sm: 5 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2, sm: 4 },
             borderRadius: '12px',
             backgroundColor: '#fff',
-            boxShadow: `
-              0 0 10px 2px rgba(76, 175, 80, 0.25),
-              0 4px 8px rgba(0, 0, 0, 0.05)
-            `,
+            boxShadow:
+              '0 0 8px 2px rgba(76,175,80,0.12), 0 4px 10px rgba(0,0,0,0.04)',
           }}
         >
           <Typography
             variant="h4"
-            component="h1"
-            gutterBottom
             fontWeight={700}
             color="success.main"
+            gutterBottom
           >
             Edit Warehouse
           </Typography>
 
-          {actionError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {actionError}
-            </Alert>
-          )}
+          {actionError && <Alert severity="error">{actionError}</Alert>}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}
+          >
             <NeutralInput
-              margin="normal"
-              required
-              fullWidth
               label="Warehouse Code"
               name="code"
               value={warehouse.code || ''}
               onChange={handleChange}
-            />
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
+            />
+            <NeutralInput
               label="Warehouse Name"
               name="name"
               value={warehouse.name || ''}
               onChange={handleChange}
-            />
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
+            />
+            <NeutralInput
               label="Location"
               name="location"
               value={warehouse.location || ''}
               onChange={handleChange}
+              required
+              fullWidth
             />
 
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                flexDirection: { xs: 'column-reverse', sm: 'row' },
+              }}
+            >
               <Button
                 type="submit"
-                fullWidth
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
+                disabled={loading}
               >
-                Update Warehouse
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  'Update Warehouse'
+                )}
               </Button>
-
               <Button
-                fullWidth
                 variant="outlined"
                 component={Link}
                 href="/warehouses"
                 sx={{
-                  color: '#4CAF50',
                   borderColor: '#4CAF50',
+                  color: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': {
-                    color: '#43A047',
                     borderColor: '#43A047',
+                    color: '#43A047',
                   },
                 }}
               >
@@ -160,28 +187,21 @@ export default function EditWarehouse({ initialWarehouse, error }) {
   );
 }
 
-// ─────────────────────────────── SSR
+// ✅ فقط بخش SSR اصلاح شده
 export async function getServerSideProps(context) {
   const { id } = context.params;
+  const baseUrl = getBaseUrl(context.req);
 
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/warehouses/${id}`);
-
     if (!res.ok) {
-      throw new Error('Failed to fetch warehouse data.');
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.message || 'Failed to fetch warehouse data.');
     }
 
     const initialWarehouse = await res.json();
-
-    return { props: { initialWarehouse } };
+    return { props: { initialWarehouse, error: null } };
   } catch (err) {
-    console.error('SSR Error [warehouses/edit/[id]]:', err);
-    return {
-      props: {
-        initialWarehouse: null,
-        error: err.message || 'Server failed to load warehouse data.',
-      },
-    };
+    return { props: { initialWarehouse: null, error: err.message } };
   }
 }

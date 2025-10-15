@@ -1,15 +1,30 @@
+// File: /pages/stock/index.js
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Container, Typography, Button, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, IconButton, Dialog, DialogActions, DialogContent,
-  DialogContentText, DialogTitle, Box, Alert
+  Container,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Box,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import GreenAppBar from '@/components/GreenAppBar';
-
-const LOW_STOCK_THRESHOLD = 10;
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 export default function Stock({ stock: initialStock, products, warehouses, error }) {
   const [stock, setStock] = useState(initialStock || []);
@@ -19,51 +34,72 @@ export default function Stock({ stock: initialStock, products, warehouses, error
 
   const getProductName = (id) => {
     const p = products.find((x) => x.id === id);
-    return p ? `${p.name} (${p.sku})` : `Unknown (${id})`;
+    return p ? `${p.name} (${p.sku})` : `Unknown (ID: ${id})`;
   };
-
   const getWarehouseName = (id) => {
     const w = warehouses.find((x) => x.id === id);
-    return w ? `${w.name} (${w.code})` : `Unknown (${id})`;
+    return w ? w.name : `Unknown (ID: ${id})`;
   };
 
-  const handleClickOpen = (id) => { setSelectedStockId(id); setOpen(true); };
-  const handleClose = () => { setOpen(false); setSelectedStockId(null); };
+  const handleClickOpen = (id) => {
+    setSelectedStockId(id);
+    setOpen(true);
+  };
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedStockId(null);
+  };
 
   const handleDelete = async () => {
     try {
       const res = await fetch(`/api/stock/${selectedStockId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete stock record.');
+      if (!res.ok) throw new Error('Failed to delete the stock record.');
       setStock((prev) => prev.filter((i) => i.id !== selectedStockId));
       handleClose();
     } catch (err) {
-      console.error(err);
+      console.error('Delete error:', err);
       setActionError(err.message);
+      handleClose();
     }
   };
 
-  // ───────────────────────────── Re-fetch Interval ─────────────────────────────
+  // auto-refresh each 5s (client)
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('/api/stock');
-        if (!res.ok) throw new Error('Failed to fetch updated stock');
+        const res = await fetch('/api/stock', { cache: 'no-store' });
+        if (!res.ok) return;
         const updated = await res.json();
         setStock(updated);
       } catch (err) {
-        console.error('Auto refresh error:', err);
+        console.error('auto-refresh err:', err);
       }
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // ───────────────────────────── UI ─────────────────────────────
   return (
     <>
       <GreenAppBar />
-      <Container sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" fontWeight={700} color="success.main">
+      <Container maxWidth="lg" sx={{ py: 4, px: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: { sm: 'space-between' },
+            alignItems: { sm: 'center' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              color: 'success.dark',
+              textAlign: { xs: 'center', sm: 'left' },
+            }}
+          >
             Stock Levels
           </Typography>
           <Button
@@ -73,45 +109,42 @@ export default function Stock({ stock: initialStock, products, warehouses, error
             sx={{
               bgcolor: '#4CAF50',
               fontWeight: 600,
-              '&:hover': { bgcolor: '#45a049' },
+              '&:hover': { bgcolor: '#43A047' },
             }}
           >
             Add Stock Record
           </Button>
         </Box>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>Failed to load data: {error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {actionError && <Alert severity="warning" sx={{ mb: 2 }}>{actionError}</Alert>}
 
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
           <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'rgba(76,175,80,0.1)' }}>
-                <TableCell><strong>Product</strong></TableCell>
-                <TableCell><strong>Warehouse</strong></TableCell>
-                <TableCell align="right"><strong>Quantity</strong></TableCell>
-                <TableCell><strong>Actions</strong></TableCell>
+            <TableHead sx={{ bgcolor: 'rgba(76,175,80,0.1)' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }}>Product</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Warehouse</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Quantity</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {stock.map((i) => (
-                <TableRow key={i.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(76,175,80,0.05)' } }}>
+                <TableRow key={i.id} hover>
                   <TableCell>{getProductName(i.productId)}</TableCell>
                   <TableCell>{getWarehouseName(i.warehouseId)}</TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color: i.quantity <= LOW_STOCK_THRESHOLD ? '#F57C00' : 'inherit',
-                      fontWeight: i.quantity <= LOW_STOCK_THRESHOLD ? 'bold' : 'normal',
-                    }}
-                  >
+                  <TableCell align="right" sx={{
+                    color: i.quantity <= i.reorderPoint ? '#F57C00' : 'inherit',
+                    fontWeight: i.quantity <= i.reorderPoint ? 'bold' : 'normal',
+                  }}>
                     {i.quantity}
                   </TableCell>
                   <TableCell>
-                    <IconButton color="primary" component={Link} href={`/stock/edit/${i.id}`} size="small">
+                    <IconButton component={Link} href={`/stock/edit/${i.id}`} color="primary">
                       <EditIcon />
                     </IconButton>
-                    <IconButton color="error" onClick={() => handleClickOpen(i.id)} size="small">
+                    <IconButton color="error" onClick={() => handleClickOpen(i.id)}>
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -120,7 +153,7 @@ export default function Stock({ stock: initialStock, products, warehouses, error
               {stock.length === 0 && !error && (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
-                    No stock records available.
+                    No stock records found.
                   </TableCell>
                 </TableRow>
               )}
@@ -132,14 +165,12 @@ export default function Stock({ stock: initialStock, products, warehouses, error
           <DialogTitle>Delete Stock Record</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Are you sure you want to delete this stock record? This action cannot be undone.
+              Are you sure? This action is permanent.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleDelete} color="error" autoFocus>
-              Delete
-            </Button>
+            <Button onClick={handleDelete} color="error">Delete</Button>
           </DialogActions>
         </Dialog>
       </Container>
@@ -147,23 +178,49 @@ export default function Stock({ stock: initialStock, products, warehouses, error
   );
 }
 
-// ───────────────────────────── SSR ─────────────────────────────
-export async function getServerSideProps() {
+export async function getServerSideProps(context) {
+  const baseUrl =
+    getBaseUrl(context.req) ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    'http://localhost:3000';
+
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const [stockRes, productsRes, warehousesRes] = await Promise.all([
-      fetch(`${baseUrl}/api/stock`),
-      fetch(`${baseUrl}/api/products`),
-      fetch(`${baseUrl}/api/warehouses`),
+    const controllers = [new AbortController(), new AbortController(), new AbortController()];
+    const timeout = setTimeout(() => controllers.forEach(c => c.abort()), 5000);
+
+    const [stockRes, productsRes, warehousesRes] = await Promise.allSettled([
+      fetch(`${baseUrl}/api/stock`, { signal: controllers[0].signal }),
+      fetch(`${baseUrl}/api/products`, { signal: controllers[1].signal }),
+      fetch(`${baseUrl}/api/warehouses`, { signal: controllers[2].signal }),
     ]);
-    if (!stockRes.ok || !productsRes.ok || !warehousesRes.ok)
-      throw new Error('Failed to fetch one or more resources.');
+
+    clearTimeout(timeout);
+
+    // ensure all fulfilled
+    if (
+      stockRes.status !== 'fulfilled' ||
+      productsRes.status !== 'fulfilled' ||
+      warehousesRes.status !== 'fulfilled'
+    ) {
+      throw new Error('One or more API requests failed or timed out.');
+    }
+
     const [stock, products, warehouses] = await Promise.all([
-      stockRes.json(), productsRes.json(), warehousesRes.json(),
+      stockRes.value.json(),
+      productsRes.value.json(),
+      warehousesRes.value.json(),
     ]);
-    return { props: { stock, products, warehouses } };
+
+    return { props: { stock, products, warehouses, error: null } };
   } catch (err) {
-    console.error('SSR Error loading stock data:', err);
-    return { props: { stock: [], products: [], warehouses: [], error: err.message } };
+    console.error('SSR Error [stock/index]:', err);
+    return {
+      props: {
+        stock: [],
+        products: [],
+        warehouses: [],
+        error: err.message || 'SSR data fetch failed.',
+      },
+    };
   }
 }

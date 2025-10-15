@@ -1,6 +1,4 @@
 // File: /pages/index.js
-// Unified Dashboard Page using shared <GreenAppBar /> with SSR data prefetch + 5s Re-fetch
-
 import { useMemo, useState, useEffect } from 'react';
 import GreenAppBar from '@/components/GreenAppBar';
 import CategoryBarChart from '@/components/charts/CategoryBarChart';
@@ -14,21 +12,27 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import fs from "fs";
+import path from "path";
 
-// ---------- COMPONENT ----------
-export default function Home({ products, warehouses, stock, error }) {
+export default function Home({
+  products,
+  warehouses,
+  stock,
+  warehouseStockData: initialWarehouseData,
+  categoryStockData: initialCategoryData,
+  error
+}) {
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
-
-  // -------- Live States (for 5s re-fetch) --------
   const [liveProducts, setLiveProducts] = useState(products);
   const [liveWarehouses, setLiveWarehouses] = useState(warehouses);
   const [liveStock, setLiveStock] = useState(stock);
-
-  // ✅ NEW: Low Stock Alert count state
   const [alertCount, setAlertCount] = useState(0);
+  const [warehouseChart, setWarehouseChart] = useState(initialWarehouseData);
+  const [categoryChart, setCategoryChart] = useState(initialCategoryData);
 
-  // -------- Automatic Re-fetch every 5 seconds --------
+  // -------- Re-fetch every 5 seconds --------
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -36,22 +40,47 @@ export default function Home({ products, warehouses, stock, error }) {
           fetch('/api/products'),
           fetch('/api/warehouses'),
           fetch('/api/stock'),
-          fetch('/api/alerts') // <--- NEW
+          fetch('/api/alerts'),
         ]);
         if (!pRes.ok || !wRes.ok || !sRes.ok || !aRes.ok)
           throw new Error('Failed during re-fetch');
-
         const [p, w, s, a] = await Promise.all([
           pRes.json(),
           wRes.json(),
           sRes.json(),
           aRes.json()
         ]);
-
         setLiveProducts(p);
         setLiveWarehouses(w);
         setLiveStock(s);
-        setAlertCount(a.length); // <--- update alert count
+        setAlertCount(a.length);
+
+        // 🌀 Recalculate charts using latest data
+        setWarehouseChart(() => {
+          const grouped = s.reduce((acc, item) => {
+            acc[item.warehouseId] = (acc[item.warehouseId] || 0) + item.quantity;
+            return acc;
+          }, {});
+          return Object.entries(grouped).map(([id, qty]) => ({
+            name: w.find(x => x.id === parseInt(id))?.name || `Warehouse ${id}`,
+            value: qty,
+          }));
+        });
+
+        setCategoryChart(() => {
+          const catTotals = {};
+          s.forEach((item) => {
+            const prod = p.find((px) => px.id === item.productId);
+            if (!prod?.category) return;
+            catTotals[prod.category] =
+              (catTotals[prod.category] || 0) + item.quantity;
+          });
+          return Object.entries(catTotals).map(([category, total]) => ({
+            category,
+            totalQuantity: total,
+          }));
+        });
+
       } catch (err) {
         console.error('Re-fetch error:', err.message);
       }
@@ -59,7 +88,7 @@ export default function Home({ products, warehouses, stock, error }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Initial fetch of alert count on mount
+  // Initial fetch for alert count
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
@@ -75,7 +104,7 @@ export default function Home({ products, warehouses, stock, error }) {
     fetchAlerts();
   }, []);
 
-  // -------- Data Summary --------
+  // -------- Summary and Table Data --------
   const summaryData = useMemo(() => {
     const totalValue = liveStock.reduce((sum, item) => {
       const product = liveProducts.find(p => p.id === item.productId);
@@ -89,32 +118,6 @@ export default function Home({ products, warehouses, stock, error }) {
     };
   }, [liveProducts, liveWarehouses, liveStock]);
 
-  // -------- Charts Data --------
-  const warehouseStockData = useMemo(() => {
-    const grouped = liveStock.reduce((acc, s) => {
-      acc[s.warehouseId] = (acc[s.warehouseId] || 0) + s.quantity;
-      return acc;
-    }, {});
-    return Object.entries(grouped).map(([id, qty]) => ({
-      name: liveWarehouses.find(w => w.id === parseInt(id))?.name || `Warehouse ${id}`,
-      value: qty,
-    }));
-  }, [liveStock, liveWarehouses]);
-
-  const categoryStockData = useMemo(() => {
-    const totals = {};
-    liveStock.forEach(item => {
-      const product = liveProducts.find(p => p.id === item.productId);
-      if (!product?.category) return;
-      totals[product.category] = (totals[product.category] || 0) + item.quantity;
-    });
-    return Object.entries(totals).map(([category, totalQuantity]) => ({
-      category,
-      totalQuantity,
-    }));
-  }, [liveStock, liveProducts]);
-
-  // -------- Inventory Table --------
   const sortedInventory = useMemo(() => {
     const inv = liveProducts.map(p => {
       const totalQ = liveStock
@@ -137,7 +140,6 @@ export default function Home({ products, warehouses, stock, error }) {
     setOrderBy(prop);
   };
 
-  // -------- Error State --------
   if (error)
     return (
       <Container sx={{ mt: 4 }}>
@@ -152,18 +154,26 @@ export default function Home({ products, warehouses, stock, error }) {
   return (
     <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
       <GreenAppBar />
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4, px: { xs: 2, md: 5 } }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#2E7D32', mb: 3, letterSpacing: 0.3 }}>
+      <Container maxWidth="xl" sx={{ mt: { xs: 2, sm: 4 }, mb: 4, px: { xs: 2, md: 4 } }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            color: '#2E7D32',
+            mb: { xs: 2, sm: 3 },
+            fontSize: { xs: '1.8rem', sm: '2.2rem' },
+          }}
+        >
           Dashboard Overview
         </Typography>
 
-        <Grid container spacing={3}>
-          {/* KPI: Products Count */}
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+          {/* KPI Cards */}
           <Grid item xs={12} sm={6} md={3}>
             <Card elevation={2} sx={styles.kpiCard}>
-              <InventoryIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+              <InventoryIcon color="success" sx={styles.kpiIcon} />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                <Typography variant="body2" color="text.secondary" sx={styles.kpiTitle}>
                   Total Products
                 </Typography>
                 <Typography variant="h5" fontWeight="bold">
@@ -173,12 +183,11 @@ export default function Home({ products, warehouses, stock, error }) {
             </Card>
           </Grid>
 
-          {/* KPI: Warehouses Count */}
           <Grid item xs={12} sm={6} md={3}>
             <Card elevation={2} sx={styles.kpiCard}>
-              <WarehouseIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+              <WarehouseIcon color="success" sx={styles.kpiIcon} />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                <Typography variant="body2" color="text.secondary" sx={styles.kpiTitle}>
                   Warehouses
                 </Typography>
                 <Typography variant="h5" fontWeight="bold">
@@ -188,7 +197,6 @@ export default function Home({ products, warehouses, stock, error }) {
             </Card>
           </Grid>
 
-          {/* ✅ KPI: Low Stock Alerts */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               elevation={2}
@@ -197,36 +205,30 @@ export default function Home({ products, warehouses, stock, error }) {
                 background:
                   alertCount > 0
                     ? 'linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%)'
-                    : 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)'
+                    : 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
               }}
             >
               <WarningAmberIcon
                 sx={{
-                  fontSize: 40,
-                  mr: 2,
-                  color: alertCount > 0 ? '#E65100' : '#388E3C'
+                  ...styles.kpiIcon,
+                  color: alertCount > 0 ? '#E65100' : '#388E3C',
                 }}
               />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                <Typography variant="body2" color="text.secondary" sx={styles.kpiTitle}>
                   Low Stock Alerts
                 </Typography>
-                <Typography
-                  variant="h5"
-                  fontWeight="bold"
-                  color={alertCount > 0 ? 'error' : 'success.main'}
-                >
+                <Typography variant="h5" fontWeight="bold" color={alertCount > 0 ? 'error' : 'success.main'}>
                   {alertCount}
                 </Typography>
               </Box>
             </Card>
           </Grid>
 
-          {/* KPI: Total Stock Value */}
           <Grid item xs={12} sm={6} md={3}>
             <Card elevation={2} sx={styles.valueCard}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', p: '16px !important' }}>
-                <MonetizationOnIcon sx={{ fontSize: 40, mr: 2, opacity: 0.85 }} />
+              <CardContent sx={{ display: 'flex', alignItems: 'center', p: { xs: 1.5, sm: 2 } }}>
+                <MonetizationOnIcon sx={styles.kpiIcon} />
                 <Box>
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Total Stock Value
@@ -235,7 +237,7 @@ export default function Home({ products, warehouses, stock, error }) {
                     $
                     {summaryData.totalValue.toLocaleString('en-US', {
                       minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
+                      maximumFractionDigits: 2,
                     })}
                   </Typography>
                 </Box>
@@ -244,21 +246,28 @@ export default function Home({ products, warehouses, stock, error }) {
           </Grid>
 
           {/* Charts */}
-          <Grid item xs={12} md={6}>
-            <WarehousePieChart data={warehouseStockData} />
+          <Grid item xs={12} lg={6}>
+            <WarehousePieChart data={warehouseChart} />
           </Grid>
-          <Grid item xs={12} md={6}>
-            <CategoryBarChart data={categoryStockData} />
+          <Grid item xs={12} lg={6}>
+            <CategoryBarChart data={categoryChart} />
           </Grid>
 
-          {/* Inventory Summary Table */}
+          {/* Inventory Table */}
           <Grid item xs={12}>
             <Card sx={{ mt: 3, borderRadius: 3, boxShadow: '0 3px 6px rgba(0,0,0,0.08)' }}>
-              <CardContent>
+              <CardContent sx={{ px: { xs: 1, sm: 2 } }}>
                 <Typography variant="h6" fontWeight="bold" color="text.primary" mb={2}>
                   Inventory Summary
                 </Typography>
-                <TableContainer component={Paper} elevation={0}>
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{
+                    width: '100%',
+                    overflowX: 'auto',
+                  }}
+                >
                   <Table>
                     <TableHead>
                       <TableRow>
@@ -282,7 +291,7 @@ export default function Home({ products, warehouses, stock, error }) {
                           key={row.id}
                           sx={{
                             backgroundColor: row.isLowStock ? '#FFF3E0' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(76,175,80,0.08)' }
+                            '&:hover': { backgroundColor: 'rgba(76,175,80,0.08)' },
                           }}
                         >
                           <TableCell>{row.name}</TableCell>
@@ -303,12 +312,12 @@ export default function Home({ products, warehouses, stock, error }) {
   );
 }
 
-// ---------- PAGE STYLES ----------
+// ---------- STYLES ----------
 const styles = {
   kpiCard: {
     display: 'flex',
     alignItems: 'center',
-    p: 2,
+    p: { xs: 1.5, sm: 2 },
     borderRadius: 3,
     boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
@@ -317,6 +326,8 @@ const styles = {
       boxShadow: '0 4px 10px rgba(76,175,80,0.45)',
     },
   },
+  kpiIcon: { fontSize: { xs: 32, sm: 40 }, mr: 2 },
+  kpiTitle: { fontWeight: 500, fontSize: { xs: '0.8rem', sm: '0.875rem' } },
   valueCard: {
     borderRadius: 3,
     color: 'white',
@@ -330,36 +341,55 @@ const styles = {
   },
 };
 
-// ---------- SSR DATA FETCHING ----------
+// ---------- getServerSideProps ----------
 export async function getServerSideProps() {
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const warehousePath = path.join(process.cwd(), "data", "warehouses.json");
+    const stockPath = path.join(process.cwd(), "data", "stock.json");
+    const productsPath = path.join(process.cwd(), "data", "products.json");
 
-    const [productsRes, warehousesRes, stockRes] = await Promise.all([
-      fetch(`${baseUrl}/api/products`),
-      fetch(`${baseUrl}/api/warehouses`),
-      fetch(`${baseUrl}/api/stock`)
-    ]);
+    const warehouses = JSON.parse(fs.readFileSync(warehousePath, "utf8"));
+    const stock = JSON.parse(fs.readFileSync(stockPath, "utf8"));
+    const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
 
-    if (!productsRes.ok || !warehousesRes.ok || !stockRes.ok) {
-      throw new Error('Failed to fetch one or more API endpoints');
-    }
+    const warehouseStockData = warehouses.map((w) => {
+      const totalQty = stock
+        .filter((s) => s.warehouseId === w.id)
+        .reduce((sum, s) => sum + s.quantity, 0);
+      return { name: w.name, value: totalQty };
+    });
 
-    const [products, warehouses, stock] = await Promise.all([
-      productsRes.json(),
-      warehousesRes.json(),
-      stockRes.json()
-    ]);
+    const categoryTotals = {};
+    stock.forEach((s) => {
+      const p = products.find((p) => p.id === s.productId);
+      if (!p?.category) return;
+      categoryTotals[p.category] =
+        (categoryTotals[p.category] || 0) + s.quantity;
+    });
+    const categoryStockData = Object.entries(categoryTotals).map(
+      ([category, total]) => ({ category, totalQuantity: total })
+    );
 
-    return { props: { products, warehouses, stock } };
+    return {
+      props: {
+        products,
+        warehouses,
+        stock,
+        warehouseStockData,
+        categoryStockData,
+        error: null,
+      },
+    };
   } catch (err) {
     return {
       props: {
         products: [],
         warehouses: [],
         stock: [],
-        error: err.message || 'Unknown error while fetching SSR data'
-      }
+        warehouseStockData: [],
+        categoryStockData: [],
+        error: err.message,
+      },
     };
   }
 }

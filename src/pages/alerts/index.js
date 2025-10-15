@@ -19,39 +19,44 @@ export default function AlertsPage() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch('/api/alerts');
-      if (!res.ok) throw new Error('Failed to fetch alerts');
+      const res = await fetch('/api/alerts', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Failed to load alerts (status ${res.status})`);
       const data = await res.json();
       setAlerts(data);
       setError(null);
     } catch (err) {
-      console.error('Error loading alerts:', err);
-      setError('Cannot load alerts at the moment.');
+      console.error('Error while fetching alerts:', err);
+      setError('Cannot load alerts at the moment. Please try again later.');
     }
   };
 
+  // Initial load + auto-refresh every 5s
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5000);
+    const interval = setInterval(() => {
+      fetchAlerts();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
-      {/* ✅ Header bar */}
       <GreenAppBar />
-
-      {/* ✅ Main content area */}
-      <Container maxWidth="md" sx={{ mt: 6, mb: 8 }}>
-        {/* --- Page title centered horizontally --- */}
+      <Container
+        maxWidth="lg"
+        sx={{
+          py: { xs: 3, sm: 4, md: 5 },
+          px: { xs: 2, sm: 3 },
+        }}
+      >
         <Typography
           variant="h4"
           align="center"
           sx={{
             fontWeight: 700,
             color: '#2E7D32',
-            mb: 3,
-            letterSpacing: 0.4,
+            mb: { xs: 3, sm: 4 },
+            fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
           }}
         >
           Low Stock Alerts
@@ -63,29 +68,33 @@ export default function AlertsPage() {
           </Alert>
         )}
 
-        {/* ✅ When there are no alerts */}
-        {alerts.length === 0 ? (
+        {alerts.length === 0 && !error ? (
           <Box
             sx={{
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              flexDirection: 'column',
-              mt: 6,
+              mt: { xs: 3, sm: 4 },
             }}
           >
             <Card
               elevation={2}
               sx={{
-                p: 5,
+                p: { xs: 3, sm: 4, md: 5 },
                 textAlign: 'center',
                 borderRadius: 3,
                 background:
                   'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
+                maxWidth: 500,
+                width: '100%',
               }}
             >
               <CheckCircleOutlineIcon
-                sx={{ fontSize: 60, color: '#43A047', mb: 1 }}
+                sx={{
+                  fontSize: { xs: 48, sm: 60 },
+                  color: '#43A047',
+                  mb: 1,
+                }}
               />
               <Typography variant="h6" color="text.primary">
                 No low-stock items 🎉
@@ -96,22 +105,20 @@ export default function AlertsPage() {
             </Card>
           </Box>
         ) : (
-          /* ✅ Alerts grid centered under the title */
-          <Grid
-            container
-            spacing={3}
-            justifyContent="center"  // horizontally center the grid 
-          >
+          <Grid container spacing={{ xs: 2, sm: 3 }} justifyContent="center">
             {alerts.map((a) => (
               <Grid
                 key={`${a.warehouseId}-${a.productId}`}
                 item
                 xs={12}
                 sm={6}
+                md={4}
               >
                 <Card
                   elevation={3}
                   sx={{
+                    height: '100%',
+                    display: 'flex',
                     borderRadius: 3,
                     background:
                       'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)',
@@ -128,24 +135,40 @@ export default function AlertsPage() {
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
+                      p: { xs: 2, sm: 2.5 },
                     }}
                   >
                     <WarningAmberIcon
-                      sx={{ fontSize: 40, color: '#E65100', mr: 2 }}
+                      sx={{
+                        fontSize: { xs: 36, sm: 40 },
+                        color: '#E65100',
+                        mr: 2,
+                      }}
                     />
                     <Box>
-                      <Typography variant="body1" fontWeight="bold">
-                        {a.productName || 'Unknown Product'} (ID: {a.productId})
+                      <Typography
+                        variant="h6"
+                        sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}
+                      >
+                        {a.productName || 'Unknown Product'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {a.warehouseName || 'Unknown Warehouse'}
+                        In: {a.warehouseName || 'Unknown Warehouse'}
                       </Typography>
                       <Typography
-                        variant="body2"
+                        variant="body1"
                         color="error"
-                        sx={{ mt: 0.5 }}
+                        sx={{ mt: 1, fontWeight: 'bold' }}
                       >
-                        Quantity remaining: {a.quantity}
+                        Stock: {a.quantity}
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ ml: 1 }}
+                        >
+                          (Threshold: {a.reorderPoint})
+                        </Typography>
                       </Typography>
                     </Box>
                   </CardContent>

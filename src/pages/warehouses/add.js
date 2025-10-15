@@ -8,9 +8,11 @@ import {
   Box,
   Paper,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
 import NeutralInput from '@/components/NeutralInput';
+import { getBaseUrl } from '@/lib/getBaseUrl'; // ✅ اضافه شد (آینده‌نگری)
 
 export default function AddWarehouse() {
   const [warehouse, setWarehouse] = useState({
@@ -20,131 +22,156 @@ export default function AddWarehouse() {
   });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleChange = (e) => {
-    setWarehouse({ ...warehouse, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    setWarehouse({ ...warehouse, [event.target.name]: event.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validate = (data) => {
+    if (!data.code?.trim() || !data.name?.trim() || !data.location?.trim()) {
+      return 'All fields are required.';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError(null);
     setSuccess(false);
 
-    if (!warehouse.name || !warehouse.location || !warehouse.code) {
-      setError('All fields are required.');
+    const validationError = validate(warehouse);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
+    setLoading(true);
     try {
       const res = await fetch('/api/warehouses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(warehouse),
+        body: JSON.stringify({
+          code: warehouse.code.trim(),
+          name: warehouse.name.trim(),
+          location: warehouse.location.trim(),
+        }),
       });
 
-      if (!res.ok) throw new Error('Failed to add warehouse.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to add warehouse.');
+      }
 
       setSuccess(true);
-      setTimeout(() => router.push('/warehouses'), 600); // ✅ short redirect delay for UX feedback
+      setTimeout(() => router.push('/warehouses'), 600);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
       <GreenAppBar />
-
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="sm" sx={{ py: { xs: 3, sm: 5 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2, sm: 4 },
             borderRadius: '12px',
-            backgroundColor: '#fff',
-            boxShadow: `
-              0 0 10px 2px rgba(76, 175, 80, 0.25),
-              0 4px 8px rgba(0, 0, 0, 0.05)
-            `,
+            bgcolor: '#fff',
+            boxShadow:
+              '0 0 8px 2px rgba(76,175,80,0.12), 0 4px 10px rgba(0,0,0,0.04)',
           }}
         >
           <Typography
             variant="h4"
-            component="h1"
+            gutterBottom
             fontWeight={700}
             color="success.main"
-            gutterBottom
+            sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
           >
             Add New Warehouse
           </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error">{error}</Alert>}
           {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Warehouse added successfully!
-            </Alert>
+            <Alert severity="success">Warehouse added successfully!</Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              mt: 3,
+            }}
+          >
             <NeutralInput
-              margin="normal"
-              required
-              fullWidth
               label="Warehouse Code"
               name="code"
               value={warehouse.code}
               onChange={handleChange}
-            />
-
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
+            />
+            <NeutralInput
               label="Warehouse Name"
               name="name"
               value={warehouse.name}
               onChange={handleChange}
-            />
-
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
+            />
+            <NeutralInput
               label="Location"
               name="location"
               value={warehouse.location}
               onChange={handleChange}
+              required
+              fullWidth
             />
 
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                flexDirection: { xs: 'column-reverse', sm: 'row' },
+              }}
+            >
               <Button
                 type="submit"
-                fullWidth
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
+                disabled={loading}
               >
-                Add Warehouse
+                {loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  'Add Warehouse'
+                )}
               </Button>
-
               <Button
-                fullWidth
                 variant="outlined"
                 component={Link}
                 href="/warehouses"
                 sx={{
-                  color: '#4CAF50',
                   borderColor: '#4CAF50',
+                  color: '#4CAF50',
                   fontWeight: 600,
-                  '&:hover': { borderColor: '#43A047', color: '#43A047' },
+                  '&:hover': {
+                    borderColor: '#43A047',
+                    color: '#43A047',
+                  },
                 }}
               >
                 Cancel

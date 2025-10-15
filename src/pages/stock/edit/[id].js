@@ -7,40 +7,67 @@ import {
   Button,
   Box,
   Paper,
-  MenuItem,
+  CircularProgress,
   Alert,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  TextField,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
-import NeutralInput from '@/components/NeutralInput';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 export default function EditStock({ initialStock, products, warehouses, error }) {
-  const [stock, setStock] = useState(initialStock || {});
-  const [actionError, setActionError] = useState(null);
   const router = useRouter();
+  const [stock, setStock] = useState(
+    initialStock || { product_id: '', warehouse_id: '', quantity: 0 }
+  );
+  const [formError, setFormError] = useState(error || null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setStock({ ...stock, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    setStock({ ...stock, [event.target.name]: event.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setActionError(null);
+  const validate = (data) => {
+    if (!data.product_id || !data.warehouse_id || !data.quantity) {
+      return 'All fields are required.';
+    }
+    if (isNaN(data.quantity) || Number(data.quantity) <= 0) {
+      return 'Quantity must be a positive number.';
+    }
+    return null;
+  };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setFormError(null);
+    const validationError = validate(stock);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch(`/api/stock/${stock.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productId: parseInt(stock.productId),
-          warehouseId: parseInt(stock.warehouseId),
-          quantity: parseInt(stock.quantity),
+          product_id: stock.product_id,
+          warehouse_id: stock.warehouse_id,
+          quantity: Number(stock.quantity),
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to update stock record.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to update stock.');
       router.push('/stock');
     } catch (err) {
-      setActionError(err.message);
+      setFormError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,16 +75,10 @@ export default function EditStock({ initialStock, products, warehouses, error })
     return (
       <>
         <GreenAppBar />
-        <Container sx={{ mt: 10 }}>
+        <Container sx={{ py: { xs: 3, sm: 5 }, textAlign: 'center' }}>
           <Alert severity="error">{error}</Alert>
-          <Button
-            sx={{ mt: 2 }}
-            variant="contained"
-            color="success"
-            component={Link}
-            href="/stock"
-          >
-            Back to Stock List
+          <Button variant="contained" color="success" sx={{ mt: 2 }} component={Link} href="/stock">
+            Back to Stock
           </Button>
         </Container>
       </>
@@ -67,109 +88,94 @@ export default function EditStock({ initialStock, products, warehouses, error })
   return (
     <>
       <GreenAppBar />
-
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="sm" sx={{ py: { xs: 3, sm: 5 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2, sm: 4 },
             borderRadius: '12px',
-            backgroundColor: '#fff',
-            boxShadow: `
-              0 0 10px 2px rgba(76, 175, 80, 0.25),
-              0 4px 8px rgba(0, 0, 0, 0.05)
-            `,
+            bgcolor: '#fff',
+            boxShadow: '0 0 8px 2px rgba(76,175,80,0.12), 0 4px 10px rgba(0,0,0,0.04)',
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            gutterBottom
-            color="success.main"
-            fontWeight={700}
-          >
-            Edit Stock Record
+          <Typography variant="h4" fontWeight={700} color="success.main" gutterBottom>
+            Edit Stock
           </Typography>
 
-          {actionError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {actionError}
-            </Alert>
-          )}
+          {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
-            <NeutralInput
-              select
-              margin="normal"
-              required
-              fullWidth
-              label="Product"
-              name="productId"
-              value={stock.productId || ''}
-              onChange={handleChange}
-            >
-              {products.map((p) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.name} ({p.sku})
-                </MenuItem>
-              ))}
-            </NeutralInput>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            noValidate
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          >
+            <FormControl fullWidth required>
+              <InputLabel>Product</InputLabel>
+              <Select
+                name="product_id"
+                value={stock.product_id}
+                label="Product"
+                onChange={handleChange}
+              >
+                {products.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <NeutralInput
-              select
-              margin="normal"
-              required
-              fullWidth
-              label="Warehouse"
-              name="warehouseId"
-              value={stock.warehouseId || ''}
-              onChange={handleChange}
-            >
-              {warehouses.map((w) => (
-                <MenuItem key={w.id} value={w.id}>
-                  {w.name} ({w.code})
-                </MenuItem>
-              ))}
-            </NeutralInput>
+            <FormControl fullWidth required>
+              <InputLabel>Warehouse</InputLabel>
+              <Select
+                name="warehouse_id"
+                value={stock.warehouse_id}
+                label="Warehouse"
+                onChange={handleChange}
+              >
+                {warehouses.map((w) => (
+                  <MenuItem key={w.id} value={w.id}>
+                    {w.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <NeutralInput
-              margin="normal"
-              required
-              fullWidth
-              type="number"
-              label="Quantity"
+            <TextField
               name="quantity"
-              inputProps={{ min: '0' }}
-              value={stock.quantity || ''}
+              label="Quantity"
+              type="number"
+              value={stock.quantity}
               onChange={handleChange}
+              fullWidth
+              required
             />
 
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
               <Button
                 type="submit"
-                fullWidth
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
+                disabled={loading}
               >
-                Update Stock
+                {loading ? <CircularProgress size={20} color="inherit" /> : 'Update Stock'}
               </Button>
-
               <Button
-                fullWidth
                 variant="outlined"
                 component={Link}
                 href="/stock"
                 sx={{
-                  color: '#4CAF50',
                   borderColor: '#4CAF50',
+                  color: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': {
-                    color: '#43A047',
                     borderColor: '#43A047',
+                    color: '#43A047',
                   },
                 }}
               >
@@ -183,22 +189,19 @@ export default function EditStock({ initialStock, products, warehouses, error })
   );
 }
 
-// ─────────────────────────────── SSR
+// ✅ SSR Standardized
 export async function getServerSideProps(context) {
   const { id } = context.params;
-
+  const baseUrl = getBaseUrl(context.req);
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-
     const [stockRes, productsRes, warehousesRes] = await Promise.all([
       fetch(`${baseUrl}/api/stock/${id}`),
       fetch(`${baseUrl}/api/products`),
       fetch(`${baseUrl}/api/warehouses`),
     ]);
 
-    if (!stockRes.ok || !productsRes.ok || !warehousesRes.ok) {
-      throw new Error('Failed to fetch stock or related data.');
-    }
+    if (!stockRes.ok) throw new Error(`Stock not found (id: ${id}).`);
+    if (!productsRes.ok || !warehousesRes.ok) throw new Error('Failed to fetch related data.');
 
     const [initialStock, products, warehouses] = await Promise.all([
       stockRes.json(),
@@ -206,16 +209,8 @@ export async function getServerSideProps(context) {
       warehousesRes.json(),
     ]);
 
-    return { props: { initialStock, products, warehouses } };
+    return { props: { initialStock, products, warehouses, error: null } };
   } catch (err) {
-    console.error('SSR Error [stock/edit/[id]]:', err);
-    return {
-      props: {
-        initialStock: null,
-        products: [],
-        warehouses: [],
-        error: err.message || 'Server failed to load data.',
-      },
-    };
+    return { props: { initialStock: null, products: [], warehouses: [], error: err.message } };
   }
 }

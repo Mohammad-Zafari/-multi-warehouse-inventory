@@ -1,45 +1,69 @@
+// File: /pages/products/edit/[id].js
+// Fully Responsive Edit Product Form with standardized SSR using getBaseUrl
+
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import {
   Container,
   Typography,
   Button,
   Box,
   Paper,
+  CircularProgress,
   Alert,
+  TextField,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
-import NeutralInput from '@/components/NeutralInput';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
-export default function EditProduct({ product: initialProduct, error }) {
-  const [product, setProduct] = useState(initialProduct || {});
-  const [actionError, setActionError] = useState(null);
+export default function EditProduct({ product, error }) {
   const router = useRouter();
+  const [formData, setFormData] = useState(product || { name: '', code: '', price: '' });
+  const [formError, setFormError] = useState(error || null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setProduct({ ...product, [e.target.name]: e.target.value });
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const validate = (data) => {
+    if (!data.name?.trim() || !data.code?.trim() || !data.price) {
+      return 'All fields are required.';
+    }
+    if (isNaN(data.price) || Number(data.price) <= 0) {
+      return 'Price must be a positive number.';
+    }
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setActionError(null);
+    setFormError(null);
 
+    const validationError = validate(formData);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${formData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...product,
-          unitCost: parseFloat(product.unitCost),
-          reorderPoint: parseInt(product.reorderPoint),
+          code: formData.code.trim(),
+          name: formData.name.trim(),
+          price: Number(formData.price),
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to update product.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to update product.');
       router.push('/products');
     } catch (err) {
-      setActionError(err.message);
+      setFormError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,14 +71,14 @@ export default function EditProduct({ product: initialProduct, error }) {
     return (
       <>
         <GreenAppBar />
-        <Container sx={{ mt: 10 }}>
+        <Container sx={{ py: 4, textAlign: 'center' }}>
           <Alert severity="error">{error}</Alert>
           <Button
-            sx={{ mt: 2 }}
             variant="contained"
             color="success"
             component={Link}
             href="/products"
+            sx={{ mt: 2 }}
           >
             Back to Products
           </Button>
@@ -66,122 +90,76 @@ export default function EditProduct({ product: initialProduct, error }) {
   return (
     <>
       <GreenAppBar />
-
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="sm" sx={{ py: { xs: 3, sm: 5 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2, sm: 4 },
             borderRadius: '12px',
-            backgroundColor: '#fff',
-            boxShadow: `
-              0 0 10px 2px rgba(76, 175, 80, 0.25),
-              0 4px 8px rgba(0, 0, 0, 0.05)
-            `,
+            bgcolor: '#fff',
+            boxShadow: '0 0 8px 2px rgba(76,175,80,0.12), 0 4px 10px rgba(0,0,0,0.04)',
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            fontWeight={700}
-            color="success.main"
-            gutterBottom
-          >
+          <Typography variant="h4" fontWeight={700} color="success.main" gutterBottom>
             Edit Product
           </Typography>
 
-          {actionError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {actionError}
-            </Alert>
-          )}
+          {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
 
           <Box
             component="form"
             onSubmit={handleSubmit}
-            noValidate
-            sx={{ mt: 2 }}
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
           >
-            <NeutralInput
-              margin="normal"
-              required
-              fullWidth
-              label="SKU"
-              name="sku"
-              value={product.sku || ''}
+            <TextField
+              label="Product Code"
+              name="code"
+              value={formData.code || ''}
               onChange={handleChange}
-            />
-
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
+            />
+            <TextField
               label="Product Name"
               name="name"
-              value={product.name || ''}
+              value={formData.name || ''}
               onChange={handleChange}
-            />
-
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
-              label="Category"
-              name="category"
-              value={product.category || ''}
-              onChange={handleChange}
             />
-
-            <NeutralInput
-              margin="normal"
-              required
-              fullWidth
+            <TextField
+              label="Price"
+              name="price"
               type="number"
-              label="Unit Cost"
-              name="unitCost"
-              inputProps={{ step: '0.01', min: '0' }}
-              value={product.unitCost || ''}
+              value={formData.price || ''}
               onChange={handleChange}
-            />
-
-            <NeutralInput
-              margin="normal"
               required
               fullWidth
-              type="number"
-              label="Reorder Point"
-              name="reorderPoint"
-              inputProps={{ min: '0' }}
-              value={product.reorderPoint || ''}
-              onChange={handleChange}
             />
 
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column-reverse', sm: 'row' } }}>
               <Button
                 type="submit"
-                fullWidth
                 variant="contained"
                 sx={{
                   bgcolor: '#4CAF50',
                   fontWeight: 600,
                   '&:hover': { bgcolor: '#43A047' },
                 }}
+                disabled={loading}
               >
-                Update Product
+                {loading ? <CircularProgress size={20} color="inherit" /> : 'Update Product'}
               </Button>
+
               <Button
-                fullWidth
                 variant="outlined"
                 component={Link}
                 href="/products"
                 sx={{
+                  borderColor: '#4CAF50',
                   color: '#4CAF50',
                   fontWeight: 600,
-                  borderColor: '#4CAF50',
-                  '&:hover': {
-                    borderColor: '#43A047',
-                    color: '#43A047',
-                  },
+                  '&:hover': { borderColor: '#43A047', color: '#43A047' },
                 }}
               >
                 Cancel
@@ -194,25 +172,18 @@ export default function EditProduct({ product: initialProduct, error }) {
   );
 }
 
-// ─────────────────────────────── SSR
+// ✅ Server-Side Rendering with standardized base URL
 export async function getServerSideProps(context) {
   const { id } = context.params;
+  const baseUrl = getBaseUrl(context.req);
 
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/products/${id}`);
-
-    if (!res.ok) throw new Error('Product not found.');
+    if (!res.ok) throw new Error(`Failed to fetch product with id: ${id}`);
 
     const product = await res.json();
-    return { props: { product } };
+    return { props: { product, error: null } };
   } catch (err) {
-    console.error('SSR Error [edit/[id]]:', err);
-    return {
-      props: {
-        product: null,
-        error: err.message || 'Failed to load product data.',
-      },
-    };
+    return { props: { product: null, error: err.message } };
   }
 }

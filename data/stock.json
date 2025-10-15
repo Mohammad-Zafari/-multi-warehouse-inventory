@@ -9,13 +9,13 @@
     "id": 2,
     "productId": 1,
     "warehouseId": 2,
-    "quantity": 33
+    "quantity": 100
   },
   {
     "id": 3,
     "productId": 2,
     "warehouseId": 1,
-    "quantity": 1211
+    "quantity": 211
   },
   {
     "id": 4,
@@ -27,13 +27,13 @@
     "id": 5,
     "productId": 3,
     "warehouseId": 1,
-    "quantity": 2290
+    "quantity": 290
   },
   {
     "id": 6,
     "productId": 3,
     "warehouseId": 2,
-    "quantity": 2010
+    "quantity": 4010
   },
   {
     "id": 7,
@@ -63,7 +63,7 @@
     "id": 11,
     "warehouseId": 2,
     "productId": 2,
-    "quantity": 1
+    "quantity": 1001
   },
   {
     "id": 12,

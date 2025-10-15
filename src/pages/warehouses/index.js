@@ -1,3 +1,6 @@
+// File: /pages/warehouses/index.js
+// Fully Responsive Warehouses Management Page
+
 import Link from 'next/link';
 import {
   Container,
@@ -21,8 +24,10 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
 import GreenAppBar from '@/components/GreenAppBar';
 import { useState, useEffect } from 'react';
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 export default function Warehouses({ warehouses: initialWarehouses, error }) {
   const [warehouses, setWarehouses] = useState(initialWarehouses || []);
@@ -30,13 +35,12 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
-  // ──────────────────────────────── Auto Re-fetch (5s) ────────────────────────────────
+  // Auto-refresh (5s)
   useEffect(() => {
     let isMounted = true;
-
     const fetchWarehouses = async () => {
       try {
-        const res = await fetch('/api/warehouses');
+        const res = await fetch('/api/warehouses', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to re-fetch warehouses.');
         const data = await res.json();
         if (isMounted) setWarehouses(data);
@@ -44,7 +48,6 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
         console.error('Re-fetch error:', err);
       }
     };
-
     const interval = setInterval(fetchWarehouses, 5000);
     return () => {
       isMounted = false;
@@ -52,21 +55,22 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
     };
   }, []);
 
-  // ──────────────────────────────── Delete Logic ────────────────────────────────
   const handleClickOpen = (id) => {
     setSelectedWarehouseId(id);
     setOpen(true);
   };
-
   const handleClose = () => {
     setOpen(false);
     setSelectedWarehouseId(null);
   };
-
   const handleDelete = async () => {
+    setActionError(null);
     try {
-      const res = await fetch(`/api/warehouses/${selectedWarehouseId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete warehouse.');
+      const res = await fetch(`/api/warehouses/${selectedWarehouseId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to delete warehouse.');
       setWarehouses((prev) => prev.filter((w) => w.id !== selectedWarehouseId));
       handleClose();
     } catch (err) {
@@ -75,101 +79,138 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
     }
   };
 
-  // ──────────────────────────────── UI ────────────────────────────────
   return (
     <>
       <GreenAppBar />
-      <Container sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" color="success.main" fontWeight={700}>
+      <Container sx={{ py: { xs: 3, sm: 4 } }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { sm: 'center' },
+            mb: { xs: 3, sm: 4 },
+            gap: 2,
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            color="success.dark"
+            fontWeight={700}
+            sx={{ fontSize: { xs: '1.8rem', sm: '2.25rem' } }}
+          >
             Warehouses
           </Typography>
           <Button
             variant="contained"
             component={Link}
             href="/warehouses/add"
+            startIcon={<AddIcon />}
             sx={{
               bgcolor: '#4CAF50',
               fontWeight: 600,
-              '&:hover': { bgcolor: '#45a049' },
+              width: { xs: '100%', sm: 'auto' },
+              '&:hover': { bgcolor: '#43A047' },
             }}
           >
             Add Warehouse
           </Button>
         </Box>
 
-        {/* Error Messages */}
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to load data: {error}
+            <strong>Failed to load data:</strong> {error}
           </Alert>
         )}
         {actionError && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert
+            severity="warning"
+            onClose={() => setActionError(null)}
+            sx={{ mb: 2 }}
+          >
             {actionError}
           </Alert>
         )}
 
-        {/* Table Display */}
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)' }}>
-                <TableCell><strong>Code</strong></TableCell>
-                <TableCell><strong>Name</strong></TableCell>
-                <TableCell><strong>Location</strong></TableCell>
-                <TableCell><strong>Actions</strong></TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {warehouses.map((warehouse) => (
-                <TableRow key={warehouse.id} hover>
-                  <TableCell>{warehouse.code}</TableCell>
-                  <TableCell>{warehouse.name}</TableCell>
-                  <TableCell>{warehouse.location}</TableCell>
-                  <TableCell>
-                    <IconButton
-                      color="primary"
-                      component={Link}
-                      href={`/warehouses/edit/${warehouse.id}`}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleClickOpen(warehouse.id)}
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
+        <Paper sx={{ borderRadius: '12px', overflow: 'hidden' }}>
+          <TableContainer>
+            <Table sx={{ minWidth: 650 }} aria-label="warehouses table">
+              <TableHead>
+                <TableRow
+                  sx={{
+                    '& th': { fontWeight: '600', backgroundColor: 'action.hover' },
+                  }}
+                >
+                  <TableCell>Code</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Location</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
+              </TableHead>
+              <TableBody>
+                {warehouses.map((warehouse) => (
+                  <TableRow
+                    key={warehouse.id}
+                    hover
+                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  >
+                    <TableCell>{warehouse.code}</TableCell>
+                    <TableCell>{warehouse.name}</TableCell>
+                    <TableCell>{warehouse.location}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        color="primary"
+                        component={Link}
+                        href={`/warehouses/edit/${warehouse.id}`}
+                        size="small"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleClickOpen(warehouse.id)}
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {warehouses.length === 0 && !error && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      align="center"
+                      sx={{ py: 5, color: 'text.secondary' }}
+                    >
+                      No warehouses available. Please add one.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
 
-              {warehouses.length === 0 && !error && (
-                <TableRow>
-                  <TableCell colSpan={4} align="center">
-                    No warehouses available.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Delete confirmation dialog */}
         <Dialog open={open} onClose={handleClose}>
-          <DialogTitle>Delete Warehouse</DialogTitle>
+          <DialogTitle fontWeight={600}>Delete Warehouse</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Are you sure you want to delete this warehouse? This action cannot be undone.
+              Are you sure you want to delete this warehouse? This action cannot
+              be undone.
             </DialogContentText>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleDelete} color="error" autoFocus>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleClose} variant="outlined">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              color="error"
+              variant="contained"
+              autoFocus
+            >
               Delete
             </Button>
           </DialogActions>
@@ -179,20 +220,39 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   );
 }
 
-// ──────────────────────────────── SSR ────────────────────────────────
-export async function getServerSideProps() {
+// --- SSR ---
+export async function getServerSideProps(context) {
+  const baseUrl =
+    getBaseUrl(context.req) ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    'http://localhost:3000';
+
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/warehouses`);
-    if (!res.ok) throw new Error('Failed to fetch warehouses.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(`${baseUrl}/api/warehouses`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          `Failed to fetch warehouses (status ${res.status})`
+      );
+    }
+
     const warehouses = await res.json();
-    return { props: { warehouses } };
+    return { props: { warehouses, error: null } };
   } catch (err) {
-    console.error('SSR Error loading warehouses:', err);
+    console.error('SSR Error [warehouses/index]:', err);
     return {
       props: {
         warehouses: [],
-        error: err.message || 'Unexpected error while loading warehouses.',
+        error: err.message || 'SSR data fetch failed',
       },
     };
   }

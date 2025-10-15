@@ -1,3 +1,6 @@
+// File: /pages/products/add.js
+// Fully Responsive Add Product Form
+
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -10,7 +13,7 @@ import {
   Alert,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
-import NeutralInput from '@/components/NeutralInput';
+import NeutralInput from '@/components/NeutralInput'; // Assuming this is a styled TextField
 
 export default function AddProduct() {
   const [product, setProduct] = useState({
@@ -31,8 +34,7 @@ export default function AddProduct() {
     e.preventDefault();
     setError(null);
 
-    // Basic validation
-    if (!product.sku || !product.name || !product.category) {
+    if (!product.sku || !product.name || !product.category || !product.unitCost) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -44,52 +46,58 @@ export default function AddProduct() {
         body: JSON.stringify({
           ...product,
           unitCost: parseFloat(product.unitCost) || 0,
-          reorderPoint: parseInt(product.reorderPoint) || 0,
+          reorderPoint: parseInt(product.reorderPoint, 10) || 10,
         }),
       });
 
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Failed to add product');
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to add the product.');
       }
 
       router.push('/products');
     } catch (err) {
       setError(err.message);
+      console.error('Submission error:', err);
     }
   };
 
-  // ─────────────────────────────── UI ───────────────────────────────
   return (
     <>
       <GreenAppBar />
 
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Container
+        maxWidth="sm"
+        sx={{
+          py: { xs: 3, sm: 4 },
+          px: { xs: 2, sm: 3 },
+        }}
+      >
         <Paper
           elevation={0}
           sx={{
-            p: 4,
+            p: { xs: 2.5, sm: 4 },
             borderRadius: '12px',
             backgroundColor: '#fff',
-            boxShadow: `
-              0 0 10px 2px rgba(76, 175, 80, 0.25),
-              0 4px 8px rgba(0, 0, 0, 0.05)
-            `,
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.15)',
           }}
         >
           <Typography
             variant="h4"
             component="h1"
-            fontWeight={700}
-            color="success.main"
-            gutterBottom
+            sx={{
+              fontWeight: 700,
+              color: 'success.dark',
+              mb: 3,
+              fontSize: { xs: '1.8rem', sm: '2.2rem' },
+            }}
           >
             Add New Product
           </Typography>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
             <NeutralInput
               margin="normal"
               required
@@ -98,6 +106,7 @@ export default function AddProduct() {
               name="sku"
               value={product.sku}
               onChange={handleChange}
+              autoFocus
             />
 
             <NeutralInput
@@ -125,7 +134,7 @@ export default function AddProduct() {
               required
               fullWidth
               type="number"
-              label="Unit Cost"
+              label="Unit Cost ($)"
               name="unitCost"
               inputProps={{ step: '0.01', min: '0' }}
               value={product.unitCost}
@@ -137,14 +146,38 @@ export default function AddProduct() {
               required
               fullWidth
               type="number"
-              label="Reorder Point"
+              label="Reorder Point (e.g., 10)"
               name="reorderPoint"
               inputProps={{ min: '0' }}
               value={product.reorderPoint}
               onChange={handleChange}
             />
 
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Box
+              sx={{
+                mt: 3,
+                display: 'flex',
+                flexDirection: { xs: 'column-reverse', sm: 'row' },
+                gap: 2,
+              }}
+            >
+              <Button
+                fullWidth
+                variant="outlined"
+                component={Link}
+                href="/products"
+                sx={{
+                  color: '#4CAF50',
+                  fontWeight: 600,
+                  borderColor: '#4CAF50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.04)',
+                    borderColor: '#43A047',
+                  },
+                }}
+              >
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 fullWidth
@@ -156,21 +189,6 @@ export default function AddProduct() {
                 }}
               >
                 Add Product
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                component={Link}
-                href="/products"
-                sx={{
-                  color: '#4CAF50',
-                  fontWeight: 600,
-                  borderColor: '#4CAF50',
-                  '&:hover': { color: '#43A047', borderColor: '#43A047' },
-                }}
-              >
-                Cancel
               </Button>
             </Box>
           </Box>

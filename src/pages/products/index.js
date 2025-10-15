@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SpaIcon from '@mui/icons-material/Spa';
 import GreenAppBar from '@/components/GreenAppBar';
+import { getBaseUrl } from '@/lib/getBaseUrl'; // ✅ اضافه شد
 
 export default function Products({ products: initialProducts, error }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -53,7 +54,7 @@ export default function Products({ products: initialProducts, error }) {
     }
   };
 
-  // ─────────────────────────────── Re-fetch Interval ───────────────────────────────
+  // ──────────────── Auto refresh ────────────────
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -66,11 +67,10 @@ export default function Products({ products: initialProducts, error }) {
       }
     }, 5000);
 
-    // cleanup
     return () => clearInterval(interval);
   }, []);
 
-  // ─────────────────────────────── UI ───────────────────────────────
+  // ──────────────── UI ────────────────
   return (
     <>
       <GreenAppBar />
@@ -138,9 +138,7 @@ export default function Products({ products: initialProducts, error }) {
                 <TableRow
                   key={product.id}
                   hover
-                  sx={{
-                    '&:hover': { backgroundColor: 'rgba(76,175,80,0.05)' },
-                  }}
+                  sx={{ '&:hover': { backgroundColor: 'rgba(76,175,80,0.05)' } }}
                 >
                   <TableCell>{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
@@ -177,7 +175,7 @@ export default function Products({ products: initialProducts, error }) {
           </Table>
         </TableContainer>
 
-        {/* Confirmation Dialog */}
+        {/* Delete confirmation */}
         <Dialog open={open} onClose={handleClose}>
           <DialogTitle sx={{ fontWeight: 'bold', color: '#2E7D32' }}>
             Delete Product
@@ -190,10 +188,7 @@ export default function Products({ products: initialProducts, error }) {
           <DialogActions>
             <Button
               onClick={handleClose}
-              sx={{
-                color: '#388E3C',
-                fontWeight: 'bold',
-              }}
+              sx={{ color: '#388E3C', fontWeight: 'bold' }}
             >
               Cancel
             </Button>
@@ -217,19 +212,24 @@ export default function Products({ products: initialProducts, error }) {
 }
 
 // ─────────────────────────────── SSR ───────────────────────────────
-export async function getServerSideProps() {
+export async function getServerSideProps(context) {
   try {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(context.req); // ✅ به‌جای process.env
     const res = await fetch(`${baseUrl}/api/products`);
-    if (!res.ok) throw new Error('Failed to fetch products.');
+
+    if (!res.ok) {
+      throw new Error(`SSR error fetching products (status ${res.status})`);
+    }
+
     const products = await res.json();
-    return { props: { products } };
+
+    return { props: { products, error: null } };
   } catch (err) {
-    console.error('SSR Error loading products:', err);
+    console.error('SSR Error [products/index]:', err);
     return {
       props: {
         products: [],
-        error: err.message || 'Unexpected error while loading products data.',
+        error: err.message || 'Unexpected error while loading products.',
       },
     };
   }
