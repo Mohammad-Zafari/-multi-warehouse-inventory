@@ -34,7 +34,7 @@ export default function StockTransferPage({
   useEffect(() => {
     async function loadTransferHistory() {
       try {
-        const res = await fetch('/api/transfer');
+        const res = await fetch('/api/transfers');
         if (!res.ok) throw new Error('Failed to fetch transfer history.');
         const data = await res.json();
         const mapped = data.map((t) => ({
@@ -69,7 +69,7 @@ export default function StockTransferPage({
           fetch('/api/warehouses'),
           fetch('/api/products'),
           fetch('/api/stock'),
-          fetch('/api/transfer'),
+          fetch('/api/transfers'),
         ]);
         if (!wRes.ok || !pRes.ok || !sRes.ok || !tRes.ok)
           throw new Error('Failed to refresh data');
@@ -164,7 +164,7 @@ export default function StockTransferPage({
       });
 
     try {
-      const res = await fetch('/api/transfer', {
+      const res = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,7 +182,7 @@ export default function StockTransferPage({
       // Refresh stock & transfer history immediately
       const stockRes = await fetch('/api/stock');
       const newStock = await stockRes.json();
-      const transferRes = await fetch('/api/transfer');
+      const transferRes = await fetch('/api/transfers');
       const updatedHistory = await transferRes.json();
 
       const mapped = updatedHistory.map((t) => ({

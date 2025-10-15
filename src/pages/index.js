@@ -13,6 +13,7 @@ import {
 import InventoryIcon from '@mui/icons-material/Inventory';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 // ---------- COMPONENT ----------
 export default function Home({ products, warehouses, stock, error }) {
@@ -24,32 +25,54 @@ export default function Home({ products, warehouses, stock, error }) {
   const [liveWarehouses, setLiveWarehouses] = useState(warehouses);
   const [liveStock, setLiveStock] = useState(stock);
 
+  // ✅ NEW: Low Stock Alert count state
+  const [alertCount, setAlertCount] = useState(0);
+
   // -------- Automatic Re-fetch every 5 seconds --------
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const [pRes, wRes, sRes] = await Promise.all([
+        const [pRes, wRes, sRes, aRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/warehouses'),
-          fetch('/api/stock')
+          fetch('/api/stock'),
+          fetch('/api/alerts') // <--- NEW
         ]);
-        if (!pRes.ok || !wRes.ok || !sRes.ok)
+        if (!pRes.ok || !wRes.ok || !sRes.ok || !aRes.ok)
           throw new Error('Failed during re-fetch');
 
-        const [p, w, s] = await Promise.all([
+        const [p, w, s, a] = await Promise.all([
           pRes.json(),
           wRes.json(),
-          sRes.json()
+          sRes.json(),
+          aRes.json()
         ]);
 
         setLiveProducts(p);
         setLiveWarehouses(w);
         setLiveStock(s);
+        setAlertCount(a.length); // <--- update alert count
       } catch (err) {
         console.error('Re-fetch error:', err.message);
       }
     }, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Initial fetch of alert count on mount
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('/api/alerts');
+        if (res.ok) {
+          const data = await res.json();
+          setAlertCount(data.length);
+        }
+      } catch (err) {
+        console.error('Failed to fetch alerts:', err.message);
+      }
+    };
+    fetchAlerts();
   }, []);
 
   // -------- Data Summary --------
@@ -165,9 +188,43 @@ export default function Home({ products, warehouses, stock, error }) {
             </Card>
           </Grid>
 
-          {/* KPI: Stock Value */}
-          <Grid item xs={12} md={6}>
-            <Card elevation={3} sx={styles.valueCard}>
+          {/* ✅ KPI: Low Stock Alerts */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              elevation={2}
+              sx={{
+                ...styles.kpiCard,
+                background:
+                  alertCount > 0
+                    ? 'linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%)'
+                    : 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)'
+              }}
+            >
+              <WarningAmberIcon
+                sx={{
+                  fontSize: 40,
+                  mr: 2,
+                  color: alertCount > 0 ? '#E65100' : '#388E3C'
+                }}
+              />
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Low Stock Alerts
+                </Typography>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color={alertCount > 0 ? 'error' : 'success.main'}
+                >
+                  {alertCount}
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
+
+          {/* KPI: Total Stock Value */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={2} sx={styles.valueCard}>
               <CardContent sx={{ display: 'flex', alignItems: 'center', p: '16px !important' }}>
                 <MonetizationOnIcon sx={{ fontSize: 40, mr: 2, opacity: 0.85 }} />
                 <Box>
@@ -253,7 +310,6 @@ const styles = {
     alignItems: 'center',
     p: 2,
     borderRadius: 3,
-    background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
     boxShadow: '0 2px 6px rgba(76,175,80,0.35)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
     '&:hover': {
@@ -271,7 +327,7 @@ const styles = {
       transform: 'translateY(-2px)',
       boxShadow: '0 4px 12px rgba(56,142,60,0.55)',
     },
-  }
+  },
 };
 
 // ---------- SSR DATA FETCHING ----------
@@ -295,9 +351,7 @@ export async function getServerSideProps() {
       stockRes.json()
     ]);
 
-    return {
-      props: { products, warehouses, stock }
-    };
+    return { props: { products, warehouses, stock } };
   } catch (err) {
     return {
       props: {
