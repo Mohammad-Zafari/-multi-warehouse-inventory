@@ -226,55 +226,65 @@ A: This is solely for technical assessment. Your code will not be used commercia
 
 ---
 
-📘 Implementation Summary
-👤 Developer
-Name: Mohammad
+## 📘 Implementation Summary
 
-Completion Time: ~17 hours total (including testing & documentation)
+### 👤 Developer
+**Name:** Mohammad (محمد)  
+**Completion Time:** ~17 hours total (including testing & documentation)
 
-✅ Features Completed
-Task 1:
-
-Fully redesigned dashboard with responsive 4‑KPI cards, animated bar and pie charts, elegant eco‑green design.
-Task 2:
-
-Complete Transfers module with validation, real‑time updates to stock data across warehouses, persistent history in transfers.json, and confirmation messages.
-Task 3:
-
-Full stock alert & reorder workflow featuring:
-Dynamic 4‑level status system (critical, low, adequate, overstocked)
-
-Suggested reorder quantity computation
-
-“Mark as Resolved” and “Order X units” actions
-
-Real-time Snackbar feedback
-
-Automatic stock updates + alert logging in alert_history.json
-
-Integration with live dashboard refresh
-
-⚙️ Key Technical Decisions
-Cache invalidation system:Added explicit cache reset after each POST (transfer, reorder, resolve) to avoid stale data on charts.
-Event‑based UI Sync:Introduced window.dispatchEvent('dashboard-refresh') to propagate real‑time updates between /alerts, /transfers, and /index dashboard without reload.
-Centralized handler (fetchDashboardData):Merged all fetch operations (products, warehouses, stock, alerts) for cleaner state management and chart recomputation.
-Responsive Design System:Used MUI spacing breakpoints + adaptive typography to maintain UX consistency on all screens.
-Persistent History Logging:Alerts and transfers recorded in data/alert_history.json for analytical traceability (future Task 4 compatibility).
-⚠️ Known Limitations
-No full API cache layer (only in‑memory TTL). Might not persist if deployed serverless.
-File‑based storage limits scalability; true DB integration not yet implemented.
-Real‑time sync still 5 s interval fallback (in between events).
-Unit tests not yet added due to time scope.
-🧪 Testing Instructions
-Run npm run dev → open http://localhost:3000
-Navigate Dashboard → observe live charts.
-Create a stock transfer in /transfers →➜ Observe pie/bar charts auto‑update immediately.
-Visit /alerts → trigger reorder or resolve →➜ Updated stock + new log added into data/alert_history.json.
-Confirm Snackbar feedback for each action.
-🎥 Video Walkthrough
-📺 Link: https://youtu.be/your-demo-link
-
-(Unlisted YouTube walkthrough including feature demo, code explanation, reflections.)
 ---
 
-**Setup issues?** Verify Node.js is installed and you're using a modern browser. If problems persist, document them in your submission.
+### ✅ Features Completed
+
+#### **Task 1 – Dashboard Redesign**
+- Fully redesigned dashboard with **responsive 4‑KPI cards**, animated **bar and pie charts**, and an elegant **eco‑green design** inspired by GreenSupply branding.
+
+#### **Task 2 – Stock Transfer Workflow**
+- Complete **Transfers** module featuring:  
+  - Input validation and persistent logging in `data/transfers.json`  
+  - Real‑time updates to stock data across warehouses  
+  - Confirmation feedback and automatic dashboard sync  
+
+#### **Task 3 – Stock Alert & Reorder System**
+- End‑to‑end implementation for proactive inventory control:  
+  - **Dynamic 4‑level status system:** `critical`, `low`, `adequate`, `overstocked`  
+  - **Suggested reorder quantity** auto‑calculation  
+  - Action buttons — “**Mark as Resolved**” & “**Order X units**”  
+  - **Real‑time Snackbar feedback** for instant success messages  
+  - Automatic stock updates & **history logging** (`data/alert_history.json`)  
+  - Integrated with dashboard live refresh mechanism  
+
+---
+
+### ⚙️ Key Technical Decisions
+
+1. **Cache Invalidation System:**  
+   Explicit cache reset after each `POST` (`transfer`, `reorder`, `resolve`) to prevent chart staleness.  
+
+2. **Event‑Based UI Sync:**  
+   Introduced `window.dispatchEvent('dashboard-refresh')` to propagate instant updates between `/alerts`, `/transfers`, and `/index` dashboard components.  
+
+3. **Centralized Data Handler:**  
+   Consolidated all fetch operations within `fetchDashboardData()` for streamlined state management and chart recomputation.  
+
+4. **Responsive Design System:**  
+   Used MUI breakpoints and adaptive typography for consistent UX across all viewport sizes.  
+
+5. **Persistent History Logging:**  
+   Recorded all reorder and transfer actions into `data/alert_history.json` for analytical traceability (future Task 4 extension).  
+
+---
+
+### ⚠️ Known Limitations
+- No dedicated API‑level cache layer (uses **in‑memory TTL**, volatile on redeploy).  
+- **File‑based storage** restricts scalability — future DB migration required.  
+- Real‑time sync still backed by a **5 s polling fallback**.  
+- **Unit tests** not yet implemented due to scope focus.  
+
+---
+
+### 🧪 Testing Instructions
+
+1. Run the app:
+```bash
+   npm run dev
