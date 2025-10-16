@@ -229,7 +229,7 @@ A: This is solely for technical assessment. Your code will not be used commercia
 ## 📘 Implementation Summary
 
 ### 👤 Developer
-**Name:** Mohammad (محمد)  
+**Name:** Mohammad
 **Completion Time:** ~17 hours total (including testing & documentation)
 
 ---
@@ -288,3 +288,16 @@ A: This is solely for technical assessment. Your code will not be used commercia
 1. Run the app:
 ```bash
    npm run dev
+1. **Navigate to Dashboard** → Observe **live KPI cards & charts** updating in real‑time.  
+2. **Go to `/transfers`** → Initiate a **stock transfer** → ✅ **Charts update instantly** upon confirmation.  
+3. **Open `/alerts`** → Test **Reorder** or **Resolve** actions →  
+   - 📦 Stock quantity updates **immediately**  
+   - 🧾 New log appended to `data/alert_history.json`  
+   - 🎉 Snackbar feedback appears confirming success  
+
+---
+
+### 🎥 Video Walkthrough
+
+📺 **Link:** [https://youtu.be/your-demo-link](https://youtu.be/your-demo-link)  
+_Unlisted YouTube walkthrough including feature demo, code explanation, and technical reflections._
