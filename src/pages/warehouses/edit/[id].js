@@ -187,7 +187,6 @@ export default function EditWarehouse({ initialWarehouse, error }) {
   );
 }
 
-// ✅ فقط بخش SSR اصلاح شده
 export async function getServerSideProps(context) {
   const { id } = context.params;
   const baseUrl = getBaseUrl(context.req);

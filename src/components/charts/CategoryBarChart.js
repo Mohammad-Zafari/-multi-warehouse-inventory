@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
-// ✅ Import all Recharts pieces dynamically (client-only)
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
 const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
@@ -13,9 +12,8 @@ const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr
 const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
 const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
 
-// ✅ Orange color palette generator (for category labels)
 const generateOrangePalette = (count) => {
-  const baseHue = 30; // amber‑orange tone
+  const baseHue = 30; 
   const minLight = 35;
   const maxLight = 55;
   const saturation = 80;
@@ -77,7 +75,6 @@ export default function CategoryBarChart({ data = [] }) {
         />
         <Legend verticalAlign="bottom" height={36} iconType="circle" />
 
-        {/* ✅ Gradient Definition for Orange Shade */}
         <defs>
           <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#bb7610ff" />
@@ -85,7 +82,6 @@ export default function CategoryBarChart({ data = [] }) {
           </linearGradient>
         </defs>
 
-        {/* ✅ Apply Gradient Fill Instead of Plain Color */}
         <Bar
           dataKey="totalQuantity"
           name="Total Quantity"

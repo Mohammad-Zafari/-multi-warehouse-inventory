@@ -1,5 +1,3 @@
-// ~/components/charts/WarehousePieChart.js
-// Eco-Friendly "Orange Hue 30" Pie Chart Component
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import dynamic from 'next/dynamic';
@@ -92,5 +90,4 @@ function WarehousePieChart({ data }) {
   );
 }
 
-// ✅ Dynamic export for SSR safety
 export default dynamic(() => Promise.resolve(WarehousePieChart), { ssr: false });

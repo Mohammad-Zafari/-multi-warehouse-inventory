@@ -184,7 +184,6 @@ export default function AddStock({ products, warehouses, error }) {
   );
 }
 
-// ✅ SSR Standardized
 export async function getServerSideProps(context) {
   const baseUrl = getBaseUrl(context.req);
   try {

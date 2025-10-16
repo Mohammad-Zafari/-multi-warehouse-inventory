@@ -1,4 +1,3 @@
-// File: /components/GreenAppBar.js
 import React, { useState } from "react";
 import {
   AppBar,
@@ -35,8 +34,7 @@ export default function GreenAppBar() {
   const toggleDrawer = (open) => () => setMobileOpen(open);
 
   const handleNav = (href) => {
-    setMobileOpen(false); // فوراً Drawer بسته شود
-    // در فریم بعد Router را اجرا کن تا DOM پاک شده باشد
+    setMobileOpen(false); 
     setTimeout(() => router.push(href), 0);
   };
 
@@ -71,7 +69,6 @@ export default function GreenAppBar() {
             GreenSupply Co.
           </Typography>
 
-          {/* Buttons (Desktop) */}
           <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1.5 }}>
             {menuItems.map((item) => (
               <Button
@@ -92,7 +89,6 @@ export default function GreenAppBar() {
             ))}
           </Box>
 
-          {/* Burger (Mobile) */}
           <IconButton
             color="inherit"
             edge="end"
@@ -104,12 +100,11 @@ export default function GreenAppBar() {
         </Toolbar>
       </AppBar>
 
-      {/* Drawer with no animation */}
       <Drawer
         anchor="right"
         open={mobileOpen}
         onClose={toggleDrawer(false)}
-        transitionDuration={0} // انیمیشن صفر
+        transitionDuration={0} 
         PaperProps={{
           sx: {
             width: 250,
@@ -147,7 +142,7 @@ export default function GreenAppBar() {
               {menuItems.map((item) => (
                 <ListItem key={item.href} disablePadding>
                   <ListItemButton
-                    onClick={() => handleNav(item.href)} // ناوبری فوری
+                    onClick={() => handleNav(item.href)}
                     sx={{
                       borderRadius: 2,
                       mb: 0.5,

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
 import NeutralInput from '@/components/NeutralInput';
-import { getBaseUrl } from '@/lib/getBaseUrl'; // ✅ اضافه شد (آینده‌نگری)
+import { getBaseUrl } from '@/lib/getBaseUrl'; 
 
 export default function AddWarehouse() {
   const [warehouse, setWarehouse] = useState({

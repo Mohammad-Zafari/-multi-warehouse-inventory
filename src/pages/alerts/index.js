@@ -1,183 +1,242 @@
-// File: /pages/alerts/index.js
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from "react";
 import {
   Box,
-  Card,
-  CardContent,
+  Container,
   Typography,
   Grid,
-  Container,
+  Card,
+  CardContent,
+  Button,
   Alert,
-} from '@mui/material';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import GreenAppBar from '@/components/GreenAppBar';
+  Snackbar,
+} from "@mui/material";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import GreenAppBar from "@/components/GreenAppBar";
+
+const statusColors = {
+  critical: "#D32F2F",
+  low: "#FBC02D",
+  adequate: "#388E3C",
+  overstocked: "#1976D2",
+  resolved: "#9E9E9E",
+  reordered: "#80CBC4",
+};
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState([]);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ show: false, msg: "" }); // 🔹 برای اعلان
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch('/api/alerts', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Failed to load alerts (status ${res.status})`);
+      const res = await fetch("/api/alerts");
       const data = await res.json();
       setAlerts(data);
-      setError(null);
     } catch (err) {
-      console.error('Error while fetching alerts:', err);
-      setError('Cannot load alerts at the moment. Please try again later.');
+      console.error("Error fetching alerts:", err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Initial load + auto-refresh every 5s
+  const handleAction = async (id, actionType) => {
+    try {
+      await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, actionType }),
+      });
+      await fetchAlerts();
+      setToast({
+        show: true,
+        msg:
+          actionType === "reordered"
+            ? "Reorder placed ✅"
+            : "Alert marked as resolved ✔",
+      });
+    } catch (err) {
+      console.error("Action failed:", err.message);
+      setToast({ show: true, msg: "Action failed ❌" });
+    }
+  };
+
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(() => {
-      fetchAlerts();
-    }, 5000);
+    const interval = setInterval(fetchAlerts, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  if (loading)
+    return (
+      <Container sx={{ mt: 8 }}>
+        <Typography variant="h6" align="center" color="text.secondary">
+          Loading alerts...
+        </Typography>
+      </Container>
+    );
+
+  if (!alerts.length)
+    return (
+      <Box sx={{ backgroundColor: "#f9fafc", minHeight: "100vh" }}>
+        <GreenAppBar />
+        <Container maxWidth="md" sx={{ mt: 10, textAlign: "center" }}>
+          <AssignmentTurnedInIcon
+            sx={{ fontSize: 70, color: "#66BB6A", mb: 2 }}
+          />
+          <Typography variant="h5" sx={{ color: "#2E7D32", fontWeight: 600 }}>
+            All stock levels are sufficient ✔
+          </Typography>
+        </Container>
+      </Box>
+    );
+
   return (
-    <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
+    <Box sx={{ backgroundColor: "#f4f6f8", minHeight: "100vh", pb: 8 }}>
       <GreenAppBar />
-      <Container
-        maxWidth="lg"
-        sx={{
-          py: { xs: 3, sm: 4, md: 5 },
-          px: { xs: 2, sm: 3 },
-        }}
-      >
+      <Container maxWidth="lg" sx={{ pt: 4 }}>
         <Typography
           variant="h4"
-          align="center"
-          sx={{
-            fontWeight: 700,
-            color: '#2E7D32',
-            mb: { xs: 3, sm: 4 },
-            fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
-          }}
+          sx={{ mb: 3, fontWeight: 600, color: "#2E7D32" }}
         >
-          Low Stock Alerts
+          Inventory Alerts
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        {alerts.length === 0 && !error ? (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              mt: { xs: 3, sm: 4 },
-            }}
-          >
-            <Card
-              elevation={2}
-              sx={{
-                p: { xs: 3, sm: 4, md: 5 },
-                textAlign: 'center',
-                borderRadius: 3,
-                background:
-                  'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
-                maxWidth: 500,
-                width: '100%',
-              }}
-            >
-              <CheckCircleOutlineIcon
+        <Grid container spacing={3}>
+          {alerts.map((alert) => (
+            <Grid item xs={12} md={6} lg={4} key={alert.id}>
+              <Card
+                elevation={3}
                 sx={{
-                  fontSize: { xs: 48, sm: 60 },
-                  color: '#43A047',
-                  mb: 1,
+                  borderLeft: `5px solid ${
+                    statusColors[alert.status] || "#999"
+                  }`,
+                  borderRadius: 3,
+                  transition: "transform 0.2s ease",
+                  "&:hover": { transform: "translateY(-2px)" },
                 }}
-              />
-              <Typography variant="h6" color="text.primary">
-                No low-stock items 🎉
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Inventory levels are healthy across all warehouses.
-              </Typography>
-            </Card>
-          </Box>
-        ) : (
-          <Grid container spacing={{ xs: 2, sm: 3 }} justifyContent="center">
-            {alerts.map((a) => (
-              <Grid
-                key={`${a.warehouseId}-${a.productId}`}
-                item
-                xs={12}
-                sm={6}
-                md={4}
               >
-                <Card
-                  elevation={3}
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    borderRadius: 3,
-                    background:
-                      'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)',
-                    boxShadow: '0 4px 8px rgba(255,152,0,0.25)',
-                    transition:
-                      'transform 0.2s ease, box-shadow 0.2s ease',
-                    '&:hover': {
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 5px 12px rgba(255,152,0,0.35)',
-                    },
-                  }}
-                >
-                  <CardContent
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      p: { xs: 2, sm: 2.5 },
-                    }}
-                  >
-                    <WarningAmberIcon
-                      sx={{
-                        fontSize: { xs: 36, sm: 40 },
-                        color: '#E65100',
-                        mr: 2,
-                      }}
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <InventoryIcon
+                      sx={{ color: statusColors[alert.status], mr: 1 }}
                     />
-                    <Box>
-                      <Typography
-                        variant="h6"
-                        sx={{ fontSize: { xs: '1rem', sm: '1.125rem' } }}
+                    <Typography variant="h6" fontWeight="bold">
+                      {alert.productName}
+                    </Typography>
+                  </Box>
+
+                  <Typography variant="body2" color="text.secondary" mb={0.5}>
+                    Warehouse: <strong>{alert.warehouseName}</strong>
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary" mb={0.5}>
+                    Current Qty: <strong>{alert.quantity}</strong>
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary" mb={1}>
+                    Status:{" "}
+                    <strong style={{ color: statusColors[alert.status] }}>
+                      {alert.status.toUpperCase()}
+                    </strong>
+                  </Typography>
+
+                  {(alert.status === "critical" ||
+                    alert.status === "low") && (
+                    <Alert
+                      severity="warning"
+                      sx={{
+                        mb: 1.5,
+                        backgroundColor: "#FFF8E1",
+                        borderRadius: 2,
+                        "& .MuiAlert-icon": { color: "#F9A825" },
+                      }}
+                    >
+                      Recommended reorder quantity:{" "}
+                      <b>{alert.reorderQty} units</b>
+                    </Alert>
+                  )}
+
+                  <Box display="flex" gap={1}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        backgroundColor: "#2E7D32",
+                        color: "white",
+                        textTransform: "none",
+                        "&:hover": { backgroundColor: "#1B5E20" },
+                      }}
+                      onClick={() => handleAction(alert.id, "resolved")}
+                      disabled={
+                        alert.action === "resolved" ||
+                        alert.action === "reordered"
+                      }
+                    >
+                      Mark Resolved
+                    </Button>
+
+                    {(alert.status === "critical" ||
+                      alert.status === "low") && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          textTransform: "none",
+                          borderColor: "#81C784",
+                          color: "#2E7D32",
+                          "&:hover": { backgroundColor: "#E8F5E9" },
+                        }}
+                        onClick={() => handleAction(alert.id, "reordered")}
+                        disabled={alert.action === "reordered"}
                       >
-                        {a.productName || 'Unknown Product'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        In: {a.warehouseName || 'Unknown Warehouse'}
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        color="error"
-                        sx={{ mt: 1, fontWeight: 'bold' }}
-                      >
-                        Stock: {a.quantity}
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 1 }}
-                        >
-                          (Threshold: {a.reorderPoint})
-                        </Typography>
-                      </Typography>
+                        {alert.action === "reordered"
+                          ? "Reordered ✓"
+                          : `Order ${alert.reorderQty}`}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {alert.action === "resolved" && (
+                    <Box
+                      mt={1}
+                      color="#9E9E9E"
+                      fontSize={13}
+                      display="flex"
+                      alignItems="center"
+                      gap={0.5}
+                    >
+                      <DoneAllIcon sx={{ fontSize: 18 }} /> Marked as resolved
                     </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
+                  )}
+
+                  {alert.action === "reordered" && (
+                    <Box
+                      mt={1}
+                      color="#4DB6AC"
+                      fontSize={13}
+                      display="flex"
+                      alignItems="center"
+                      gap={0.5}
+                    >
+                      <DoneAllIcon sx={{ fontSize: 18 }} /> Reorder placed
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Container>
+
+      <Snackbar
+        open={toast.show}
+        onClose={() => setToast({ show: false, msg: "" })}
+        autoHideDuration={3000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        message={toast.msg}
+      />
     </Box>
   );
 }

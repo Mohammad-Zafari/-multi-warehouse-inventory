@@ -1,12 +1,5 @@
-// components/NeutralInput.js
 import React from 'react';
 import TextField from '@mui/material/TextField';
-
-/**
- * NeutralInput Component
- * Reusable TextField variant with neutral focus styling (gray border and label on focus)
- * Ideal for CRUD forms (Add/Edit Stock, Warehouse, Product) in Eco-Green theme project.
- */
 
 export default function NeutralInput(props) {
   return (
@@ -17,25 +10,25 @@ export default function NeutralInput(props) {
       sx={{
         '& .MuiOutlinedInput-root': {
           '& fieldset': {
-            borderColor: '#ccc', // default border
+            borderColor: '#ccc', 
             transition: 'border-color 0.25s ease',
           },
           '&:hover fieldset': {
-            borderColor: '#9e9e9e', // hover border
+            borderColor: '#9e9e9e',
           },
           '&.Mui-focused fieldset': {
-            borderColor: '#607D8B', // 🩶 neutral blue-gray focus border
-            boxShadow: '0 0 4px rgba(96, 125, 139, 0.4)', // subtle glow all-around
+            borderColor: '#607D8B', 
+            boxShadow: '0 0 4px rgba(96, 125, 139, 0.4)', 
           },
         },
         '& .MuiInputLabel-root': {
-          color: '#777', // default label color
+          color: '#777', 
         },
         '& .MuiInputLabel-root.Mui-focused': {
-          color: '#607D8B', // label color when focused
+          color: '#607D8B',
         },
         '& .MuiInputBase-input': {
-          color: '#333', // text color inside input
+          color: '#333', 
         },
       }}
     />

@@ -189,7 +189,6 @@ export default function EditStock({ initialStock, products, warehouses, error })
   );
 }
 
-// ✅ SSR Standardized
 export async function getServerSideProps(context) {
   const { id } = context.params;
   const baseUrl = getBaseUrl(context.req);

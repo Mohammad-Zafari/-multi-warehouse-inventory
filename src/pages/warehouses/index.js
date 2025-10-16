@@ -1,5 +1,3 @@
-// File: /pages/warehouses/index.js
-// Fully Responsive Warehouses Management Page
 
 import Link from 'next/link';
 import {
@@ -35,7 +33,6 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
-  // Auto-refresh (5s)
   useEffect(() => {
     let isMounted = true;
     const fetchWarehouses = async () => {
@@ -220,7 +217,6 @@ export default function Warehouses({ warehouses: initialWarehouses, error }) {
   );
 }
 
-// --- SSR ---
 export async function getServerSideProps(context) {
   const baseUrl =
     getBaseUrl(context.req) ||

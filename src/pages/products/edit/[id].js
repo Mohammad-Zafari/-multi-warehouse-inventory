@@ -1,5 +1,3 @@
-// File: /pages/products/edit/[id].js
-// Fully Responsive Edit Product Form with standardized SSR using getBaseUrl
 
 import { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -172,7 +170,6 @@ export default function EditProduct({ product, error }) {
   );
 }
 
-// ✅ Server-Side Rendering with standardized base URL
 export async function getServerSideProps(context) {
   const { id } = context.params;
   const baseUrl = getBaseUrl(context.req);

@@ -1,4 +1,3 @@
-// File: /pages/stock-transfer/index.js
 import React, { useEffect, useState } from 'react';
 import {
   Container, Box, Typography, Grid, Card, FormControl,
@@ -8,9 +7,8 @@ import {
 } from '@mui/material';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import GreenAppBar from '@/components/GreenAppBar';
-import { getBaseUrl } from '@/lib/getBaseUrl'; // ✅ اضافه شد
+import { getBaseUrl } from '@/lib/getBaseUrl'; 
 
-// ───────────────────────────── Component ─────────────────────────────
 export default function StockTransferPage({
   warehouses: initialWarehouses,
   products: initialProducts,
@@ -31,7 +29,6 @@ export default function StockTransferPage({
 
   const handleSnackbarClose = () => setSnack({ ...snack, open: false });
 
-  // ─────────────────────────────── Transfer History ───────────────────────────────
   useEffect(() => {
     async function loadTransferHistory() {
       try {
@@ -60,7 +57,6 @@ export default function StockTransferPage({
     loadTransferHistory();
   }, [warehouses, products]);
 
-  // ───────────────────────────── Auto Refresh ─────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
@@ -83,7 +79,6 @@ export default function StockTransferPage({
     return () => { isMounted = false; clearInterval(timer); };
   }, []);
 
-  // ───────────────────────────── Derived Data ─────────────────────────────
   const productsAvailableInSource = fromWarehouse
     ? products.filter((p) =>
         stock.some(
@@ -101,7 +96,6 @@ export default function StockTransferPage({
         Number(s.productId) === Number(productId)
     )?.quantity ?? 0;
 
-  // ───────────────────────────── Transfer Logic ─────────────────────────────
   const handleTransfer = async (e) => {
     e.preventDefault();
     if (!fromWarehouse || !toWarehouse || !productId || !quantity)
@@ -151,7 +145,6 @@ export default function StockTransferPage({
     );
   }
 
-  // ───────────────────────────── UI ─────────────────────────────
   return (
     <>
       <GreenAppBar />
@@ -167,7 +160,6 @@ export default function StockTransferPage({
           </Typography>
 
           <Grid container spacing={4} alignItems="stretch">
-            {/* ▬▬▬ Transfer Form ▬▬▬ */}
             <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
               <Grow in timeout={500} style={{ flexGrow: 1 }}>
                 <Card sx={styles.card}>
@@ -228,7 +220,6 @@ export default function StockTransferPage({
               </Grow>
             </Grid>
 
-            {/* ▬▬▬ Stock Summary ▬▬▬ */}
             <Grid item xs={12} md={6} sx={{ display: 'flex' }}>
               <Grow in timeout={700} style={{ flexGrow: 1 }}>
                 <Card sx={styles.card}>
@@ -254,7 +245,6 @@ export default function StockTransferPage({
             </Grid>
           </Grid>
 
-          {/* ▬▬▬ Transfer History ▬▬▬ */}
           <Grow in timeout={900}>
             <Card sx={{ mt: 5, borderRadius: 3, p: 3 }}>
               <Typography variant="h6" fontWeight={600} color="success.main">Transfer History</Typography>
@@ -312,7 +302,6 @@ export default function StockTransferPage({
   );
 }
 
-// ───────────────────────────── Styles ─────────────────────────────
 const styles = {
   card: {
     borderRadius: 3,
@@ -344,9 +333,8 @@ const styles = {
   },
 };
 
-// ───────────────────────────── SSR ─────────────────────────────
 export async function getServerSideProps(context) {
-  const baseUrl = getBaseUrl(context.req); // ✅ استاندارد جدید جایگزین manual protocol/host
+  const baseUrl = getBaseUrl(context.req); 
 
   try {
     const [warehousesRes, productsRes, stockRes] = await Promise.all([

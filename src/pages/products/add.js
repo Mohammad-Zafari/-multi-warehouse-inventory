@@ -1,5 +1,3 @@
-// File: /pages/products/add.js
-// Fully Responsive Add Product Form
 
 import { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -13,7 +11,7 @@ import {
   Alert,
 } from '@mui/material';
 import GreenAppBar from '@/components/GreenAppBar';
-import NeutralInput from '@/components/NeutralInput'; // Assuming this is a styled TextField
+import NeutralInput from '@/components/NeutralInput'; 
 
 export default function AddProduct() {
   const [product, setProduct] = useState({

@@ -24,7 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SpaIcon from '@mui/icons-material/Spa';
 import GreenAppBar from '@/components/GreenAppBar';
-import { getBaseUrl } from '@/lib/getBaseUrl'; // ✅ اضافه شد
+import { getBaseUrl } from '@/lib/getBaseUrl';
 
 export default function Products({ products: initialProducts, error }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -54,7 +54,6 @@ export default function Products({ products: initialProducts, error }) {
     }
   };
 
-  // ──────────────── Auto refresh ────────────────
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -70,7 +69,6 @@ export default function Products({ products: initialProducts, error }) {
     return () => clearInterval(interval);
   }, []);
 
-  // ──────────────── UI ────────────────
   return (
     <>
       <GreenAppBar />
@@ -175,7 +173,6 @@ export default function Products({ products: initialProducts, error }) {
           </Table>
         </TableContainer>
 
-        {/* Delete confirmation */}
         <Dialog open={open} onClose={handleClose}>
           <DialogTitle sx={{ fontWeight: 'bold', color: '#2E7D32' }}>
             Delete Product
@@ -211,10 +208,9 @@ export default function Products({ products: initialProducts, error }) {
   );
 }
 
-// ─────────────────────────────── SSR ───────────────────────────────
 export async function getServerSideProps(context) {
   try {
-    const baseUrl = getBaseUrl(context.req); // ✅ به‌جای process.env
+    const baseUrl = getBaseUrl(context.req);
     const res = await fetch(`${baseUrl}/api/products`);
 
     if (!res.ok) {

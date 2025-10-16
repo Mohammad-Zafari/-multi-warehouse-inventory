@@ -1,4 +1,3 @@
-// File: /pages/index.js
 import { useMemo, useState, useEffect } from 'react';
 import GreenAppBar from '@/components/GreenAppBar';
 import CategoryBarChart from '@/components/charts/CategoryBarChart';
@@ -32,7 +31,6 @@ export default function Home({
   const [warehouseChart, setWarehouseChart] = useState(initialWarehouseData);
   const [categoryChart, setCategoryChart] = useState(initialCategoryData);
 
-  // -------- Re-fetch every 5 seconds --------
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -55,7 +53,6 @@ export default function Home({
         setLiveStock(s);
         setAlertCount(a.length);
 
-        // 🌀 Recalculate charts using latest data
         setWarehouseChart(() => {
           const grouped = s.reduce((acc, item) => {
             acc[item.warehouseId] = (acc[item.warehouseId] || 0) + item.quantity;
@@ -88,7 +85,6 @@ export default function Home({
     return () => clearInterval(interval);
   }, []);
 
-  // Initial fetch for alert count
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
@@ -104,7 +100,6 @@ export default function Home({
     fetchAlerts();
   }, []);
 
-  // -------- Summary and Table Data --------
   const summaryData = useMemo(() => {
     const totalValue = liveStock.reduce((sum, item) => {
       const product = liveProducts.find(p => p.id === item.productId);
@@ -150,7 +145,6 @@ export default function Home({
       </Container>
     );
 
-  // -------- Render --------
   return (
     <Box sx={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
       <GreenAppBar />
@@ -168,7 +162,6 @@ export default function Home({
         </Typography>
 
         <Grid container spacing={{ xs: 2, sm: 3 }}>
-          {/* KPI Cards */}
           <Grid item xs={12} sm={6} md={3}>
             <Card elevation={2} sx={styles.kpiCard}>
               <InventoryIcon color="success" sx={styles.kpiIcon} />
@@ -245,7 +238,6 @@ export default function Home({
             </Card>
           </Grid>
 
-          {/* Charts */}
           <Grid item xs={12} lg={6}>
             <WarehousePieChart data={warehouseChart} />
           </Grid>
@@ -253,7 +245,6 @@ export default function Home({
             <CategoryBarChart data={categoryChart} />
           </Grid>
 
-          {/* Inventory Table */}
           <Grid item xs={12}>
             <Card sx={{ mt: 3, borderRadius: 3, boxShadow: '0 3px 6px rgba(0,0,0,0.08)' }}>
               <CardContent sx={{ px: { xs: 1, sm: 2 } }}>
@@ -312,7 +303,6 @@ export default function Home({
   );
 }
 
-// ---------- STYLES ----------
 const styles = {
   kpiCard: {
     display: 'flex',
@@ -341,7 +331,6 @@ const styles = {
   },
 };
 
-// ---------- getServerSideProps ----------
 export async function getServerSideProps() {
   try {
     const warehousePath = path.join(process.cwd(), "data", "warehouses.json");

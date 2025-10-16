@@ -1,5 +1,85 @@
 [
   {
+    "id": 22,
+    "date": "2025-10-16T12:25:36.762Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 3,
+    "productId": 4,
+    "quantity": 200
+  },
+  {
+    "id": 21,
+    "date": "2025-10-16T08:23:12.200Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 1,
+    "productId": 2,
+    "quantity": 200
+  },
+  {
+    "id": 20,
+    "date": "2025-10-16T08:21:38.336Z",
+    "fromWarehouseId": 1,
+    "toWarehouseId": 3,
+    "productId": 4,
+    "quantity": 2000
+  },
+  {
+    "id": 19,
+    "date": "2025-10-16T07:51:49.681Z",
+    "fromWarehouseId": 3,
+    "toWarehouseId": 1,
+    "productId": 3,
+    "quantity": 8500
+  },
+  {
+    "id": 18,
+    "date": "2025-10-16T07:51:18.233Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 3,
+    "productId": 3,
+    "quantity": 6666
+  },
+  {
+    "id": 17,
+    "date": "2025-10-16T07:50:00.498Z",
+    "fromWarehouseId": 1,
+    "toWarehouseId": 2,
+    "productId": 3,
+    "quantity": 2700
+  },
+  {
+    "id": 16,
+    "date": "2025-10-16T07:45:39.978Z",
+    "fromWarehouseId": 1,
+    "toWarehouseId": 2,
+    "productId": 2,
+    "quantity": 1800
+  },
+  {
+    "id": 15,
+    "date": "2025-10-16T07:37:12.456Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 1,
+    "productId": 4,
+    "quantity": 1456
+  },
+  {
+    "id": 14,
+    "date": "2025-10-16T07:36:55.558Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 1,
+    "productId": 2,
+    "quantity": 900
+  },
+  {
+    "id": 13,
+    "date": "2025-10-16T07:35:04.911Z",
+    "fromWarehouseId": 2,
+    "toWarehouseId": 3,
+    "productId": 2,
+    "quantity": 999
+  },
+  {
     "id": 12,
     "date": "2025-10-15T16:56:53.028Z",
     "fromWarehouseId": 1,

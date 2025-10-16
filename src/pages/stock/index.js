@@ -1,4 +1,3 @@
-// File: /pages/stock/index.js
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -63,7 +62,6 @@ export default function Stock({ stock: initialStock, products, warehouses, error
     }
   };
 
-  // auto-refresh each 5s (client)
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -196,7 +194,6 @@ export async function getServerSideProps(context) {
 
     clearTimeout(timeout);
 
-    // ensure all fulfilled
     if (
       stockRes.status !== 'fulfilled' ||
       productsRes.status !== 'fulfilled' ||
