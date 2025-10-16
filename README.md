@@ -299,5 +299,5 @@ A: This is solely for technical assessment. Your code will not be used commercia
 
 ### 🎥 Video Walkthrough
 
-📺 **Link:** [https://youtu.be/your-demo-link](https://youtu.be/your-demo-link)  
+📺 **Link:** [https://youtu.be/Z_sl8WEI1wA]
 _Unlisted YouTube walkthrough including feature demo, code explanation, and technical reflections._
